@@ -2,12 +2,14 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Lab Robot Studuino Mobile - Scratch Wrap &amp; Drag</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Lab Robot Studuino Mobile - Pinned Controls</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* Gunakan dynamic viewport height (dvh) agar pas dengan bar browser */
     html, body {
-      height: 100%;
+      height: 100dvh;
+      max-height: 100dvh;
       overflow: hidden;
       overscroll-behavior: none;
       -webkit-touch-callout: none;
@@ -17,7 +19,7 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-    /* Scratch Drop Guidance Lines */
+    /* Drop Guidance */
     .drop-indicator-top {
       border-top: 3px solid #38bdf8 !important;
       box-shadow: 0 -3px 8px rgba(56, 189, 248, 0.5);
@@ -30,7 +32,6 @@
       background-color: rgba(56, 189, 248, 0.15) !important;
       border: 2px dashed #38bdf8 !important;
     }
-    /* Scratch Container "Wrap-Around" Highlight */
     .drop-indicator-wrap {
       outline: 2px dashed #f59e0b !important;
       outline-offset: 2px;
@@ -51,20 +52,23 @@
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 flex flex-col font-sans h-screen p-2.5 max-w-md mx-auto">
+<body class="bg-slate-950 text-slate-100 flex flex-col font-sans h-[100dvh] p-2 max-w-md mx-auto">
 
-  <!-- Floating Ghost Avatar during Drag -->
-  <div id="touchGhost" class="px-2.5 py-1.5 rounded-lg border border-sky-400 bg-sky-950/95 text-sky-200 text-[10px] font-mono shadow-2xl"></div>
+  <!-- Floating Touch Ghost -->
+  <div id="touchGhost" class="px-2.5 py-1 rounded-lg border border-sky-400 bg-sky-950/95 text-sky-200 text-[10px] font-mono shadow-2xl"></div>
 
   <!-- Header -->
-  <header class="flex items-center justify-between py-1 border-b border-slate-800 mb-1.5 flex-shrink-0">
+  <header class="flex items-center justify-between py-1 border-b border-slate-800 mb-1 flex-shrink-0">
     <div class="flex items-center gap-1.5">
       <span class="text-sm">🧩</span>
-      <h1 class="text-xs font-bold text-sky-400">Lab Studuino Mobile</h1>
+      <h1 class="text-xs font-bold text-sky-400">Lab Studuino</h1>
     </div>
     <div class="flex items-center gap-1.5">
+      <button onclick="toggleArenaSize()" id="toggleArenaBtn" class="bg-slate-800 border border-slate-700 active:bg-slate-700 text-slate-300 px-2 py-0.5 rounded-full text-[9px] font-mono">
+        📐 Arena Mini
+      </button>
       <button onclick="openTutorial()" class="bg-indigo-600 active:bg-indigo-500 text-white px-2 py-0.5 rounded-full text-[9px] font-medium shadow">
-        🎮 Uji Motor
+        🎮 Uji
       </button>
       <div id="statusBadge" class="bg-slate-900 border border-slate-700 px-2 py-0.5 rounded-full text-[9px] font-mono text-slate-300">
         Siap
@@ -72,30 +76,25 @@
     </div>
   </header>
 
-  <!-- Arena Simulasi -->
-  <div class="relative w-full aspect-[16/9] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner flex-shrink-0 mb-1.5">
+  <!-- Arena Simulasi (Ukuran responsif & bisa diperkecil saat menyusun kode) -->
+  <div id="arenaBox" class="relative w-full aspect-[20/9] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner flex-shrink-0 mb-1 transition-all duration-200">
     <canvas id="simCanvas" class="w-full h-full block"></canvas>
     
-    <div class="absolute top-1.5 left-1.5 bg-slate-950/90 backdrop-blur-sm border border-slate-800 rounded px-1.5 py-0.5 text-[9px] font-mono text-slate-300 flex gap-2">
+    <div class="absolute top-1 left-1 bg-slate-950/90 backdrop-blur-sm border border-slate-800 rounded px-1.5 py-0.5 text-[8px] font-mono text-slate-300 flex gap-2">
       <div>M1: <span id="hudM1" class="text-sky-400 font-bold">MATI</span></div>
       <div>M2: <span id="hudM2" class="text-teal-400 font-bold">MATI</span></div>
       <div>SENTUH: <span id="hudTouch" class="text-slate-500 font-bold">0</span></div>
       <div>ARAH: <span id="hudHdg" class="text-amber-400 font-bold">0°</span></div>
     </div>
 
-    <div class="absolute bottom-1.5 right-1.5 flex gap-1">
-      <button onclick="clearTrail()" class="bg-slate-900/80 active:bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded text-[9px]">Hapus</button>
-      <button onclick="stopAndReset()" class="bg-rose-950/80 active:bg-rose-900 text-rose-300 border border-rose-700/60 px-2 py-0.5 rounded text-[9px]">■ Reset</button>
+    <div class="absolute bottom-1 right-1 flex gap-1">
+      <button onclick="clearTrail()" class="bg-slate-900/80 active:bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded text-[8px]">Hapus</button>
+      <button onclick="stopAndReset()" class="bg-rose-950/80 active:bg-rose-900 text-rose-300 border border-rose-700/60 px-1.5 py-0.5 rounded text-[8px]">■ Reset</button>
     </div>
   </div>
 
-  <!-- PALET BLOK (Tarik blok baru dari sini ke area kode) -->
-  <div id="paletteBar" class="mb-1.5 flex-shrink-0 bg-slate-900/60 border border-slate-800 rounded-xl p-1.5 transition-colors">
-    <div class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1 flex justify-between">
-      <span>Palet Blok Baru (Tarik ke Bawah)</span>
-      <span class="text-slate-500 font-normal">Geser ➔</span>
-    </div>
-    
+  <!-- PALET HORIZONTAL SWIPEABLE -->
+  <div id="paletteBar" class="mb-1 flex-shrink-0 bg-slate-900/60 border border-slate-800 rounded-lg p-1 transition-colors">
     <div class="flex gap-1 overflow-x-auto no-scrollbar pb-0.5" style="touch-action: pan-x;">
       <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab active:cursor-grabbing" data-type="M1_POWER_100">M1 DAYA 100</div>
       <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab active:cursor-grabbing" data-type="M1_CW">M1 SEARAH ↻</div>
@@ -114,30 +113,28 @@
     </div>
   </div>
 
-  <!-- AREA KERJA KODE (Scroll Mandiri & Drag Bebas) -->
-  <div id="workspaceContainer" class="flex-1 flex flex-col min-h-0 bg-slate-900/80 border border-slate-800 rounded-xl p-1.5 shadow-inner relative">
-    
-    <!-- Top Bar Workspace -->
+  <!-- AREA KERJA KODE (Scrollable) -->
+  <div id="workspaceContainer" class="flex-1 min-h-0 bg-slate-900/80 border border-slate-800 rounded-xl p-1.5 shadow-inner flex flex-col mb-1 relative">
     <div class="flex justify-between items-center mb-1 flex-shrink-0">
-      <input id="studentName" type="text" placeholder="Nama / Kelompok" class="w-1/2 bg-slate-950 border border-slate-800 rounded px-2 py-0.5 text-[11px] text-slate-100 focus:outline-none focus:border-sky-500">
+      <input id="studentName" type="text" placeholder="Nama / Kelompok" class="w-1/2 bg-slate-950 border border-slate-800 rounded px-2 py-0.5 text-[10px] text-slate-100 focus:outline-none focus:border-sky-500">
       <div class="flex items-center gap-1">
-        <span class="text-[9px] text-slate-400">Seret ke luar untuk <b class="text-rose-400">hapus</b></span>
-        <button onclick="clearWorkspace()" class="px-2 py-0.5 bg-slate-800 active:bg-slate-700 text-slate-300 text-[10px] rounded">Kosongkan</button>
+        <span class="text-[8px] text-slate-400">Tarik ke luar = <b class="text-rose-400">hapus</b></span>
+        <button onclick="clearWorkspace()" class="px-2 py-0.5 bg-slate-800 active:bg-slate-700 text-slate-300 text-[9px] rounded">Kosongkan</button>
       </div>
     </div>
 
-    <!-- Scrollable Workspace Container -->
-    <div id="mainDropZone" class="flex-1 overflow-y-auto pr-0.5 flex flex-col gap-1.5" style="touch-action: pan-y;">
-      <!-- Blok yang disusun siswa muncul di sini -->
+    <!-- Scrollable Code Drop Zone -->
+    <div id="mainDropZone" class="flex-1 overflow-y-auto pr-0.5 flex flex-col gap-1" style="touch-action: pan-y;">
+      <!-- Blok yang disusun siswa -->
     </div>
   </div>
 
-  <!-- Tombol Eksekusi Bawah -->
-  <div class="grid grid-cols-2 gap-2 mt-1.5 flex-shrink-0">
-    <button id="runBtn" onclick="runSimulation()" class="w-full py-2 bg-sky-600 active:bg-sky-500 text-slate-950 font-bold rounded-xl text-xs transition shadow flex items-center justify-center gap-1">
+  <!-- TOMBOL AKSI BAWAH (ALWAYS PINNED & VISIBLE) -->
+  <div class="w-full flex-shrink-0 grid grid-cols-2 gap-2 pt-1 pb-1 z-30 bg-slate-950">
+    <button id="runBtn" onclick="runSimulation()" class="w-full py-2.5 bg-sky-600 active:bg-sky-500 text-slate-950 font-bold rounded-xl text-xs transition shadow-lg shadow-sky-950 flex items-center justify-center gap-1">
       <span>▶</span> Jalankan Simulasi
     </button>
-    <button onclick="exportJSON()" class="w-full py-2 bg-slate-800 active:bg-slate-700 border border-slate-700 text-slate-100 font-semibold rounded-xl text-xs transition shadow flex items-center justify-center gap-1">
+    <button onclick="exportJSON()" class="w-full py-2.5 bg-slate-800 active:bg-slate-700 border border-slate-700 text-slate-100 font-semibold rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-1">
       <span>📥</span> Unduh Misi
     </button>
   </div>
@@ -146,14 +143,14 @@
   <div id="tutorialModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm p-3 hidden flex items-center justify-center overflow-y-auto">
     <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-4 shadow-2xl flex flex-col gap-2.5 my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-        <h2 class="text-sm font-bold text-sky-400 flex items-center gap-1"><span>🎮</span> Panduan Drag &amp; Wrap</h2>
+        <h2 class="text-sm font-bold text-sky-400 flex items-center gap-1"><span>🎮</span> Panduan Blok</h2>
         <button onclick="closeTutorial()" class="text-slate-400 font-bold text-sm px-2 py-0.5 rounded bg-slate-800">✕</button>
       </div>
       <p class="text-[10px] text-slate-300 leading-relaxed">
-        • <b>Seret Blok Baru:</b> Tarik blok dari palet atas dan letakkan di posisi mana saja.<br>
-        • <b>Pindahkan Posisi:</b> Sentuh dan tahan <b>≡</b> pada blok kode untuk memindahkannya ke atas, ke bawah, atau ke dalam kontainer.<br>
-        • <b>Membungkus Kode (Wrap):</b> Tarik blok kontainer (ULANGI / SELAMANYA / JIKA) dan arahkan ke blok yang ada. Garis oranye menandakan blok-blok di bawahnya akan otomatis dibungkus masuk ke dalamnya!<br>
-        • <b>Hapus Blok:</b> Cukup seret blok yang ada ke luar kotak area kode dan lepaskan.
+        • <b>Tambah Blok:</b> Tarik blok dari palet atas atau ketuk untuk menambahkan ke akhir program.<br>
+        • <b>Geser Posisi:</b> Sentuh dan tahan <b>≡</b> untuk memindahkan blok.<br>
+        • <b>Bungkus Loop (Wrap):</b> Tarik blok ULANGI/SELAMANYA ke tengah blok lain untuk membungkus kode di bawahnya masuk ke dalam loop.<br>
+        • <b>Hapus Blok:</b> Seret blok ke luar kotak kode atau ketuk tanda silang <b>✕</b>.
       </p>
       <button onclick="closeTutorial()" class="w-full py-2 bg-sky-600 active:bg-sky-500 text-slate-950 font-bold rounded-xl text-xs transition">
         Saya Mengerti
@@ -164,6 +161,8 @@
   <script>
     const canvas = document.getElementById('simCanvas');
     const ctx = canvas.getContext('2d');
+    const arenaBox = document.getElementById('arenaBox');
+    const toggleArenaBtn = document.getElementById('toggleArenaBtn');
     const statusBadge = document.getElementById('statusBadge');
     const runBtn = document.getElementById('runBtn');
     const workspaceContainer = document.getElementById('workspaceContainer');
@@ -187,14 +186,28 @@
       m2: { power: 0, mode: 'STOP', phase: 0, currentSpeed: 0 }
     };
 
-    let obstacle = { x: 0, y: 0, w: 32, h: 32 };
+    let obstacle = { x: 0, y: 0, w: 28, h: 28 };
     let pathHistory = [];
     let isRunning = false;
     let animFrame = null;
     let lastPhysicsTime = 0;
     let touchSensorActive = false;
 
-    // Pohon Program Awal
+    // Toggle ukuran arena untuk layar HP kecil
+    let isMiniArena = false;
+    function toggleArenaSize() {
+      isMiniArena = !isMiniArena;
+      if (isMiniArena) {
+        arenaBox.className = 'relative w-full h-24 rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner flex-shrink-0 mb-1 transition-all duration-200';
+        toggleArenaBtn.textContent = '📐 Arena Luas';
+      } else {
+        arenaBox.className = 'relative w-full aspect-[20/9] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner flex-shrink-0 mb-1 transition-all duration-200';
+        toggleArenaBtn.textContent = '📐 Arena Mini';
+      }
+      setTimeout(resizeCanvas, 220);
+    }
+
+    // Program Tree Awal
     let programTree = [
       { id: 1, type: 'M1_POWER_100', text: 'M1 KEKUATAN 100' },
       { id: 2, type: 'M2_POWER_100', text: 'M2 KEKUATAN 100' },
@@ -212,7 +225,7 @@
       { id: 8, type: 'M2_BRAKE', text: 'M2 BERHENTI REM' }
     ];
 
-    let nextBlockId = 900;
+    let nextBlockId = 1000;
 
     function getBlockSpec(type) {
       switch(type) {
@@ -249,12 +262,10 @@
       }
     }
 
-    // ============================================================
-    // UNIVERSAL TOUCH / DRAG ENGINE WITH SCRATCH WRAP LOGIC
-    // ============================================================
-    let activeDrag = null; // { isNew, type, id, ghostText, startX, startY }
+    // Touch & Drag Engine
+    let activeDrag = null;
     let lastDropTarget = null;
-    let lastDropPos = null; // 'before' | 'after' | 'inside' | 'wrap' | 'delete'
+    let lastDropPos = null;
     let hasMovedThreshold = false;
 
     function initPaletteTouch() {
@@ -307,18 +318,16 @@
 
       clearAllIndicators();
 
-      // Auto-scroll workspace jika kursor mendekati batas atas/bawah
       const dropRect = mainDropZone.getBoundingClientRect();
-      if (e.clientY < dropRect.top + 25) {
+      if (e.clientY < dropRect.top + 20) {
         mainDropZone.scrollTop -= 6;
-      } else if (e.clientY > dropRect.bottom - 25) {
+      } else if (e.clientY > dropRect.bottom - 20) {
         mainDropZone.scrollTop += 6;
       }
 
       const target = document.elementFromPoint(e.clientX, e.clientY);
       if (!target) return;
 
-      // DETEKSI 3: JIKA DISERET KE LUAR AREA KODE -> TANDAI HAPUS (TANPA TEMPAT SAMPAH)
       const isInsideWorkspace = target.closest('#mainDropZone');
       if (!activeDrag.isNew && !isInsideWorkspace) {
         lastDropTarget = null;
@@ -346,9 +355,6 @@
         const relY = e.clientY - rect.top;
         const spec = getBlockSpec(activeDrag.type || findNodeById(programTree, activeDrag.id)?.type);
 
-        // DETEKSI 4: SCRATCH WRAP-AROUND FITUR UNTUK KONTAINER
-        // Jika blok yang diseret adalah kontainer (ULANGI / SELAMANYA / JIKA)
-        // dan diarahkan ke tengah blok lain -> beri preview membungkus
         if (spec.isContainer && relY > rect.height * 0.25 && relY < rect.height * 0.75) {
           blockEl.classList.add('drop-indicator-wrap');
           lastDropPos = 'wrap';
@@ -376,17 +382,17 @@
       document.querySelectorAll('.is-moving').forEach(el => el.classList.remove('is-moving'));
 
       if (activeDrag) {
-        // KASUS A: TAP CEPAT PALET -> TAMBAH 1 KE PALING BAWAH
+        // Tap cepat = tambah 1 di akhir
         if (activeDrag.isNew && !hasMovedThreshold) {
           programTree.push(createNode(activeDrag.type));
           renderWorkspace();
         }
-        // KASUS B: SERET KE LUAR KODE -> HAPUS DARI PROGRAM
+        // Seret ke luar = hapus
         else if (!activeDrag.isNew && lastDropPos === 'delete') {
           extractNodeById(programTree, activeDrag.id);
           renderWorkspace();
         }
-        // KASUS C: DROP TARGET DITEMUKAN (BEFORE / AFTER / INSIDE / WRAP)
+        // Drop pada target tertentu
         else if (lastDropTarget) {
           let nodeToInsert = null;
           if (activeDrag.isNew) {
@@ -403,7 +409,6 @@
                 container.children.push(nodeToInsert);
               }
             } else if (lastDropPos === 'wrap') {
-              // IMPLEMENTASI FITUR 4: BUNGKUS BLOK-BLOK DI SEKITARNYA KE DALAM MULUT KONTAINER
               const targetId = parseInt(lastDropTarget.dataset.blockId);
               wrapExistingCodeInside(programTree, targetId, nodeToInsert);
             } else {
@@ -415,7 +420,7 @@
           }
           renderWorkspace();
         }
-        // KASUS D: DRAG BLOK BARU KE AREA KOSONG
+        // Seret blok baru ke area kosong
         else if (activeDrag.isNew && hasMovedThreshold) {
           const target = document.elementFromPoint(e.clientX, e.clientY);
           if (target && target.closest('#mainDropZone')) {
@@ -438,17 +443,12 @@
       });
     }
 
-    // ============================================================
-    // LOGIKA SCRATCH WRAP-AROUND (FITUR 4)
-    // ============================================================
     function wrapExistingCodeInside(list, targetId, containerNode) {
       for (let i = 0; i < list.length; i++) {
         if (list[i].id === targetId) {
-          // Ambil blok target dan blok-blok di bawahnya yang selevel untuk dimasukkan ke dalam wadah
           const wrappedBlocks = list.splice(i);
           if (!containerNode.children) containerNode.children = [];
           containerNode.children.push(...wrappedBlocks);
-          // Tempatkan blok kontainer yang sekarang membungkus blok-blok tersebut
           list.splice(i, 0, containerNode);
           return true;
         }
@@ -459,7 +459,6 @@
       return false;
     }
 
-    // Navigasi Data Tree
     function findNodeById(list, id) {
       for (let n of list) {
         if (n.id === id) return n;
@@ -508,15 +507,12 @@
       }
     }
 
-    // ============================================================
-    // RENDERING WORKSPACE DENGAN PEGANGAN PINDAH FLEKSIBEL
-    // ============================================================
     function renderWorkspace() {
       mainDropZone.innerHTML = '';
       if (programTree.length === 0) {
         mainDropZone.innerHTML = `
-          <div class="text-center my-auto py-8 text-slate-500 text-[10px]">
-            Tarik blok dari palet ke sini untuk menyusun program robot.
+          <div class="text-center my-auto py-6 text-slate-500 text-[10px]">
+            Tarik blok dari palet ke sini untuk mulai menyusun program.
           </div>
         `;
         return;
@@ -549,7 +545,7 @@
                 </div>
                 <button onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs">✕</button>
               </div>
-              <div data-inside-slot="${node.id}" class="ml-3 pl-1.5 py-1 border-l-2 border-dashed border-amber-500/60 bg-slate-950/50 rounded-r flex flex-col gap-1 min-h-[30px] transition-all">
+              <div data-inside-slot="${node.id}" class="ml-3 pl-1.5 py-1 border-l-2 border-dashed border-amber-500/60 bg-slate-950/50 rounded-r flex flex-col gap-1 min-h-[26px] transition-all">
               </div>
               <div class="text-[8px] font-mono text-amber-500/60 px-1 uppercase tracking-wider">▲ Selesai</div>
             `;
@@ -566,7 +562,6 @@
             `;
           }
 
-          // Pasang touch listener pada pegangan ≡ untuk pemindahan/reorder
           const handle = blockEl.querySelector('.drag-handle');
           if (handle) {
             handle.addEventListener('pointerdown', (e) => {
@@ -590,23 +585,25 @@
       buildDOM(programTree, mainDropZone);
     }
 
-    // ============================================================
-    // SIMULASI ARENA FISIKA
-    // ============================================================
-    function initCanvas() {
+    // Arena Fisika
+    function resizeCanvas() {
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
       ctx.scale(dpr, dpr);
+      obstacle.x = (rect.width / 2) - 14;
+      obstacle.y = 25;
+      drawScene();
+    }
 
-      obstacle.x = (rect.width / 2) - 16;
-      obstacle.y = 35;
+    function initCanvas() {
+      resizeCanvas();
       stopAndReset();
       renderWorkspace();
       initPaletteTouch();
     }
-    window.addEventListener('resize', initCanvas);
+    window.addEventListener('resize', resizeCanvas);
     setTimeout(initCanvas, 50);
 
     function stopAndReset() {
@@ -614,7 +611,7 @@
       if (animFrame) cancelAnimationFrame(animFrame);
       const rect = canvas.getBoundingClientRect();
       robot.x = rect.width / 2;
-      robot.y = rect.height / 2 + 40;
+      robot.y = rect.height - 35;
       robot.angle = -Math.PI / 2;
       robot.m1 = { power: 0, mode: 'STOP', phase: 0, currentSpeed: 0 };
       robot.m2 = { power: 0, mode: 'STOP', phase: 0, currentSpeed: 0 };
@@ -657,10 +654,10 @@
 
       ctx.strokeStyle = '#1e293b';
       ctx.lineWidth = 1;
-      for (let x = 0; x < rect.width; x += 22) {
+      for (let x = 0; x < rect.width; x += 20) {
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, rect.height); ctx.stroke();
       }
-      for (let y = 0; y < rect.height; y += 22) {
+      for (let y = 0; y < rect.height; y += 20) {
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(rect.width, y); ctx.stroke();
       }
 
@@ -670,7 +667,7 @@
       ctx.fill();
       ctx.fillStyle = '#fecaca';
       ctx.font = '8px monospace';
-      ctx.fillText('HALANGAN', obstacle.x - 4, obstacle.y + 18);
+      ctx.fillText('HALANGAN', obstacle.x - 4, obstacle.y + 17);
 
       if (pathHistory.length > 1) {
         ctx.strokeStyle = '#0284c7';
@@ -889,8 +886,8 @@
 
       const payload = {
         meta: {
-          app: "StuduinoScratchLab_ScratchWrap",
-          version: "26.0",
+          app: "StuduinoScratchLab_MobilePinned",
+          version: "27.0",
           student: studentName,
           exportedAt: new Date().toISOString()
         },
