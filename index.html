@@ -47,6 +47,11 @@
       opacity: 0.25;
       transform: scale(0.96);
     }
+
+    /* Wajib untuk gesture touch drag di HP agar tidak dibatalkan oleh browser */
+    .palette-item, .drag-handle {
+      touch-action: none;
+    }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans p-3 max-w-md mx-auto flex flex-col gap-2.5">
@@ -70,7 +75,7 @@
     </div>
   </header>
 
-  <!-- 2. Arena Simulasi (16:9) -->
+  <!-- 2. Arena Simulasi (16:9 Ringkas) -->
   <div class="relative w-full aspect-[16/9] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner">
     <canvas id="simCanvas" class="w-full h-full block"></canvas>
     
@@ -96,20 +101,20 @@
     </div>
     
     <div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5" style="touch-action: pan-x;">
-      <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab" data-type="M1_POWER_100">M1 DAYA 100</div>
-      <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab" data-type="M1_CW">M1 SEARAH ↻</div>
-      <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab" data-type="M1_CCW">M1 LAWAN ↺</div>
-      <div class="palette-item flex-shrink-0 text-[9px] bg-rose-950 border border-rose-500/50 text-rose-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab" data-type="M1_BRAKE">M1 REM</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_POWER_100">M1 DAYA 100</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_CW">M1 SEARAH ↻</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_CCW">M1 LAWAN ↺</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-rose-950 border border-rose-500/50 text-rose-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_BRAKE">M1 REM</div>
 
-      <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab" data-type="M2_POWER_100">M2 DAYA 100</div>
-      <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab" data-type="M2_CW">M2 SEARAH ↻</div>
-      <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab" data-type="M2_CCW">M2 LAWAN ↺</div>
-      <div class="palette-item flex-shrink-0 text-[9px] bg-rose-950 border border-rose-500/50 text-rose-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab" data-type="M2_BRAKE">M2 REM</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M2_POWER_100">M2 DAYA 100</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M2_CW">M2 SEARAH ↻</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M2_CCW">M2 LAWAN ↺</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-rose-950 border border-rose-500/50 text-rose-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M2_BRAKE">M2 REM</div>
 
-      <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab" data-type="WAIT">+ TUNGGU</div>
-      <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab" data-type="REPEAT_4">ULANGI 4x</div>
-      <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab" data-type="FOREVER">SELAMANYA</div>
-      <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab" data-type="IF_TOUCH">JIKA SENTUH</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="WAIT">+ TUNGGU</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="REPEAT_4">ULANGI 4x</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="FOREVER">SELAMANYA</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="IF_TOUCH">JIKA SENTUH</div>
     </div>
   </div>
 
@@ -122,7 +127,7 @@
 
     <!-- Container Daftar Blok -->
     <div id="mainDropZone" class="flex flex-col gap-1.5 min-h-[120px]">
-      <!-- Blok dinamis dirender di sini -->
+      <!-- Blok yang disusun siswa muncul di sini -->
     </div>
   </div>
 
@@ -210,7 +215,7 @@
       { id: 8, type: 'M2_BRAKE', text: 'M2 BERHENTI REM' }
     ];
 
-    let nextBlockId = 1300;
+    let nextBlockId = 1400;
 
     function getBlockSpec(type) {
       switch(type) {
@@ -248,13 +253,12 @@
     }
 
     // ============================================================
-    // HARDENED TOUCH & POINTER ENGINE
+    // UNIVERSAL TOUCH / POINTER ENGINE
     // ============================================================
     let activeDrag = null;
     let lastDropTarget = null;
     let lastDropPos = null;
     let hasMovedThreshold = false;
-    let activePointerId = null;
 
     function initPaletteTouch() {
       document.querySelectorAll('.palette-item').forEach(item => {
@@ -274,16 +278,9 @@
 
     function startUniversalDrag(e, payload) {
       activeDrag = payload;
-      activePointerId = e.pointerId;
       hasMovedThreshold = false;
       lastDropTarget = null;
       lastDropPos = null;
-
-      try {
-        e.target.setPointerCapture(e.pointerId);
-      } catch (err) {
-        // Fallback for browsers that restrict capture
-      }
 
       touchGhost.textContent = payload.ghostText;
       touchGhost.style.left = `${e.clientX}px`;
@@ -294,7 +291,7 @@
         if (originalEl) originalEl.classList.add('is-moving');
       }
 
-      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointermove', onPointerMove, { passive: false });
       window.addEventListener('pointerup', onPointerUp);
       window.addEventListener('pointercancel', onPointerUp);
     }
@@ -303,7 +300,7 @@
       if (!activeDrag) return;
 
       const dist = Math.hypot(e.clientX - activeDrag.startX, e.clientY - activeDrag.startY);
-      if (dist > 6) {
+      if (dist > 4) {
         hasMovedThreshold = true;
         touchGhost.style.display = 'block';
       }
@@ -319,7 +316,11 @@
         window.scrollBy({ top: 10, behavior: 'auto' });
       }
 
+      // Sembunyikan ghost sesaat untuk hit-testing target di bawah pointer
+      touchGhost.style.display = 'none';
       const target = document.elementFromPoint(e.clientX, e.clientY);
+      if (hasMovedThreshold) touchGhost.style.display = 'block';
+
       if (!target) return;
 
       const isInsideWorkspace = target.closest('#mainDropZone');
@@ -337,7 +338,6 @@
 
       if (insideSlot) {
         const containerId = parseInt(insideSlot.dataset.insideSlot);
-        // Cegah drop jika kontainer adalah turunan dari blok yang sedang diseret
         if (!activeDrag.isNew && isDescendantOf(findNodeById(programTree, activeDrag.id), containerId)) {
           lastDropTarget = null;
           return;
@@ -380,23 +380,20 @@
       touchGhost.style.display = 'none';
       workspaceContainer.classList.remove('outline', 'outline-2', 'outline-rose-500/60');
 
-      if (activePointerId !== null && e.target && e.target.releasePointerCapture) {
-        try {
-          e.target.releasePointerCapture(activePointerId);
-        } catch (err) {}
-      }
-
       document.querySelectorAll('.is-moving').forEach(el => el.classList.remove('is-moving'));
 
       if (activeDrag) {
+        // Tap biasa pada palet: tambahkan tepat 1 blok ke paling bawah
         if (activeDrag.isNew && !hasMovedThreshold) {
           programTree.push(createNode(activeDrag.type));
           renderWorkspace();
         }
+        // Seret ke luar: hapus
         else if (!activeDrag.isNew && lastDropPos === 'delete') {
           extractNodeById(programTree, activeDrag.id);
           renderWorkspace();
         }
+        // Drop pada target slot
         else if (lastDropTarget) {
           let nodeToInsert = null;
           if (activeDrag.isNew) {
@@ -424,6 +421,7 @@
           }
           renderWorkspace();
         }
+        // Drag blok baru ke area kosong workspace
         else if (activeDrag.isNew && hasMovedThreshold) {
           const target = document.elementFromPoint(e.clientX, e.clientY);
           if (target && target.closest('#mainDropZone')) {
@@ -438,7 +436,6 @@
       lastDropTarget = null;
       lastDropPos = null;
       hasMovedThreshold = false;
-      activePointerId = null;
     }
 
     function clearAllIndicators() {
@@ -447,7 +444,6 @@
       });
     }
 
-    // Cek agar parent tidak bisa di-drop ke anaknya sendiri
     function isDescendantOf(parent, targetId) {
       if (!parent || !parent.children) return false;
       for (let child of parent.children) {
@@ -624,7 +620,7 @@
 
     function stopAndReset() {
       isRunning = false;
-      currentExecutionId++; // Batalkan semua async task yang sedang berjalan
+      currentExecutionId++;
       if (animFrame) cancelAnimationFrame(animFrame);
       
       robot.x = canvasLogicalWidth / 2;
@@ -849,7 +845,6 @@
         return;
       }
 
-      // Cegah multi-instansiasi loop
       stopAndReset();
       
       isRunning = true;
@@ -913,8 +908,8 @@
 
       const payload = {
         meta: {
-          app: "StuduinoScratchLab_MobileHardened",
-          version: "30.0",
+          app: "StuduinoScratchLab_MobileFinal",
+          version: "31.0",
           student: studentName,
           exportedAt: new Date().toISOString()
         },
