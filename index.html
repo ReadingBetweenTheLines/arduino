@@ -48,8 +48,8 @@
       transform: scale(0.96);
     }
 
-    /* Wajib untuk gesture touch drag di HP agar tidak dibatalkan oleh browser */
-    .palette-item, .drag-handle {
+    /* Kunci: Cegah browser membatalkan drag gesture saat menyentuh blok */
+    .palette-item, [data-block-id] {
       touch-action: none;
     }
   </style>
@@ -75,7 +75,7 @@
     </div>
   </header>
 
-  <!-- 2. Arena Simulasi (16:9 Ringkas) -->
+  <!-- 2. Arena Simulasi -->
   <div class="relative w-full aspect-[16/9] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner">
     <canvas id="simCanvas" class="w-full h-full block"></canvas>
     
@@ -150,8 +150,8 @@
       </div>
       <p class="text-[10px] text-slate-300 leading-relaxed">
         • <b>Tambah Blok:</b> Ketuk atau tarik blok dari palet atas.<br>
-        • <b>Pindahkan Posisi:</b> Sentuh dan tahan pegangan <b>≡</b> untuk memindahkan blok ke posisi lain.<br>
-        • <b>Hapus Blok:</b> Seret blok ke luar kotak kode atau ketuk tanda silang <b>✕</b>.<br>
+        • <b>Pindahkan Posisi:</b> Sentuh dan tahan di area mana saja pada blok untuk memindahkannya.<br>
+        • <b>Hapus Blok:</b> Seret blok ke luar kotak kode atau ketuk tombol silang <b>✕</b>.<br>
         • <b>Membungkus Kode:</b> Seret blok kontainer (ULANGI / SELAMANYA) ke blok lain untuk membungkus kode masuk ke dalamnya!
       </p>
       <button onclick="closeTutorial()" class="w-full py-2 bg-sky-600 active:bg-sky-500 text-slate-950 font-bold rounded-xl text-xs transition">
@@ -197,7 +197,6 @@
     let touchSensorActive = false;
     let currentExecutionId = 0;
 
-    // Pohon Program Awal
     let programTree = [
       { id: 1, type: 'M1_POWER_100', text: 'M1 KEKUATAN 100' },
       { id: 2, type: 'M2_POWER_100', text: 'M2 KEKUATAN 100' },
@@ -215,7 +214,7 @@
       { id: 8, type: 'M2_BRAKE', text: 'M2 BERHENTI REM' }
     ];
 
-    let nextBlockId = 1400;
+    let nextBlockId = 1500;
 
     function getBlockSpec(type) {
       switch(type) {
@@ -253,7 +252,7 @@
     }
 
     // ============================================================
-    // UNIVERSAL TOUCH / POINTER ENGINE
+    // DIRECT BLOCK-TOUCH & POINTER ENGINE
     // ============================================================
     let activeDrag = null;
     let lastDropTarget = null;
@@ -316,7 +315,6 @@
         window.scrollBy({ top: 10, behavior: 'auto' });
       }
 
-      // Sembunyikan ghost sesaat untuk hit-testing target di bawah pointer
       touchGhost.style.display = 'none';
       const target = document.elementFromPoint(e.clientX, e.clientY);
       if (hasMovedThreshold) touchGhost.style.display = 'block';
@@ -383,12 +381,12 @@
       document.querySelectorAll('.is-moving').forEach(el => el.classList.remove('is-moving'));
 
       if (activeDrag) {
-        // Tap biasa pada palet: tambahkan tepat 1 blok ke paling bawah
+        // Tap biasa pada palet: tambahkan 1 blok ke akhir
         if (activeDrag.isNew && !hasMovedThreshold) {
           programTree.push(createNode(activeDrag.type));
           renderWorkspace();
         }
-        // Seret ke luar: hapus
+        // Seret ke luar kode: hapus
         else if (!activeDrag.isNew && lastDropPos === 'delete') {
           extractNodeById(programTree, activeDrag.id);
           renderWorkspace();
@@ -421,7 +419,7 @@
           }
           renderWorkspace();
         }
-        // Drag blok baru ke area kosong workspace
+        // Drag blok baru ke area kosong
         else if (activeDrag.isNew && hasMovedThreshold) {
           const target = document.elementFromPoint(e.clientX, e.clientY);
           if (target && target.closest('#mainDropZone')) {
@@ -517,6 +515,9 @@
       }
     }
 
+    // ============================================================
+    // RENDERING WORKSPACE (DRAGGABLE ANYWHERE ON CARD BODY)
+    // ============================================================
     function renderWorkspace() {
       mainDropZone.innerHTML = '';
       if (programTree.length === 0) {
@@ -535,58 +536,59 @@
           blockEl.dataset.blockId = node.id;
 
           if (spec.isWait) {
-            blockEl.className = `rounded-lg border ${spec.color} px-2 py-1 shadow-sm text-[10px] font-mono flex items-center justify-between transition-all`;
+            blockEl.className = `rounded-lg border ${spec.color} px-2 py-1 shadow-sm text-[10px] font-mono flex items-center justify-between transition-all cursor-grab active:cursor-grabbing`;
             blockEl.innerHTML = `
-              <div class="flex items-center gap-1.5 flex-1">
-                <span class="drag-handle cursor-grab active:cursor-grabbing text-amber-400 font-bold px-1.5 py-0.5 select-none text-xs bg-amber-950/80 rounded border border-amber-500/40">≡</span>
+              <div class="flex items-center gap-1.5 flex-1 pointer-events-none">
+                <span class="text-amber-400 font-bold px-1 select-none text-xs">≡</span>
                 <span>TUNGGU</span>
-                <input type="number" step="0.1" min="0.1" max="10" value="${node.value || 1.0}" onchange="updateWaitValue(${node.id}, this.value)" class="w-11 bg-slate-900 border border-amber-500/60 rounded px-1 py-0.5 text-center font-bold text-amber-300 text-[10px]">
+                <input type="number" step="0.1" min="0.1" max="10" value="${node.value || 1.0}" onchange="updateWaitValue(${node.id}, this.value)" class="pointer-events-auto w-11 bg-slate-900 border border-amber-500/60 rounded px-1 py-0.5 text-center font-bold text-amber-300 text-[10px]">
                 <span>d</span>
               </div>
-              <button onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs">✕</button>
+              <button onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs pointer-events-auto">✕</button>
             `;
           } else if (spec.isContainer) {
-            blockEl.className = `rounded-xl border ${spec.color} p-1 shadow-sm text-xs flex flex-col gap-1 transition-all`;
+            blockEl.className = `rounded-xl border ${spec.color} p-1 shadow-sm text-xs flex flex-col gap-1 transition-all cursor-grab active:cursor-grabbing`;
             blockEl.innerHTML = `
-              <div class="flex items-center justify-between font-mono font-bold text-[10px] px-1">
+              <div class="flex items-center justify-between font-mono font-bold text-[10px] px-1 pointer-events-none">
                 <div class="flex items-center gap-1.5">
-                  <span class="drag-handle cursor-grab active:cursor-grabbing text-amber-400 font-bold px-1.5 py-0.5 select-none text-xs bg-amber-950 rounded border border-amber-500/40">≡</span>
+                  <span class="text-amber-400 font-bold px-1 select-none text-xs">≡</span>
                   <span>📂 ${escapeHtml(node.text)}</span>
                 </div>
-                <button onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs">✕</button>
+                <button onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs pointer-events-auto">✕</button>
               </div>
               <div data-inside-slot="${node.id}" class="ml-3 pl-1.5 py-1 border-l-2 border-dashed border-amber-500/60 bg-slate-950/50 rounded-r flex flex-col gap-1 min-h-[26px] transition-all">
               </div>
-              <div class="text-[8px] font-mono text-amber-500/60 px-1 uppercase tracking-wider">▲ Selesai</div>
+              <div class="text-[8px] font-mono text-amber-500/60 px-1 uppercase tracking-wider pointer-events-none">▲ Selesai</div>
             `;
             const innerSlot = blockEl.querySelector('[data-inside-slot]');
             buildDOM(node.children || [], innerSlot);
           } else {
-            blockEl.className = `rounded-lg border ${spec.color} px-2 py-1 shadow-sm text-[10px] font-mono flex items-center justify-between transition-all`;
+            blockEl.className = `rounded-lg border ${spec.color} px-2 py-1 shadow-sm text-[10px] font-mono flex items-center justify-between transition-all cursor-grab active:cursor-grabbing`;
             blockEl.innerHTML = `
-              <div class="flex items-center gap-1.5">
-                <span class="drag-handle cursor-grab active:cursor-grabbing text-slate-300 font-bold px-1.5 py-0.5 select-none text-xs bg-slate-900 rounded border border-slate-700">≡</span>
+              <div class="flex items-center gap-1.5 pointer-events-none">
+                <span class="text-slate-400 font-bold px-1 select-none text-xs">≡</span>
                 <span>${escapeHtml(node.text)}</span>
               </div>
-              <button onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs">✕</button>
+              <button onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs pointer-events-auto">✕</button>
             `;
           }
 
-          const handle = blockEl.querySelector('.drag-handle');
-          if (handle) {
-            handle.addEventListener('pointerdown', (e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              startUniversalDrag(e, { 
-                isNew: false, 
-                id: node.id, 
-                type: node.type,
-                ghostText: node.text || (node.type === 'WAIT' ? `TUNGGU ${node.value}s` : 'BLOK'),
-                startX: e.clientX,
-                startY: e.clientY
-              });
+          // Pasang listener di seluruh badan blok (kecuali tombol dan input)
+          blockEl.addEventListener('pointerdown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+            if (e.target.closest('[data-inside-slot]') && e.target !== blockEl) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            startUniversalDrag(e, { 
+              isNew: false, 
+              id: node.id, 
+              type: node.type,
+              ghostText: node.text || (node.type === 'WAIT' ? `TUNGGU ${node.value}s` : 'BLOK'),
+              startX: e.clientX,
+              startY: e.clientY
             });
-          }
+          });
 
           parentEl.appendChild(blockEl);
         });
@@ -595,7 +597,7 @@
       buildDOM(programTree, mainDropZone);
     }
 
-    // Arena Fisika & Scaling
+    // Arena Fisika
     function resizeCanvas() {
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
@@ -909,7 +911,7 @@
       const payload = {
         meta: {
           app: "StuduinoScratchLab_MobileFinal",
-          version: "31.0",
+          version: "32.0",
           student: studentName,
           exportedAt: new Date().toISOString()
         },
