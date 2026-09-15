@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Lab Robot Studuino Mobile - Scratch Wrap &amp; Drag</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      -webkit-touch-callout: none;
+      user-select: none;
+    }
+    
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Scratch Drop Guidance Lines */
+    .drop-indicator-top {
+      border-top: 3px solid #38bdf8 !important;
+      box-shadow: 0 -3px 8px rgba(56, 189, 248, 0.5);
+    }
+    .drop-indicator-bottom {
+      border-bottom: 3px solid #38bdf8 !important;
+      box-shadow: 0 3px 8px rgba(56, 189, 248, 0.5);
+    }
+    .drop-indicator-inside {
+      background-color: rgba(56, 189, 248, 0.15) !important;
+      border: 2px dashed #38bdf8 !important;
+    }
+    /* Scratch Container "Wrap-Around" Highlight */
+    .drop-indicator-wrap {
+      outline: 2px dashed #f59e0b !important;
+      outline-offset: 2px;
+      background-color: rgba(245, 158, 11, 0.1) !important;
+    }
+
+    #touchGhost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      display: none;
+    }
+
+    .is-moving {
+      opacity: 0.25;
+      transform: scale(0.96);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 flex flex-col font-sans h-screen p-2.5 max-w-md mx-auto">
+
+  <!-- Floating Ghost Avatar during Drag -->
+  <div id="touchGhost" class="px-2.5 py-1.5 rounded-lg border border-sky-400 bg-sky-950/95 text-sky-200 text-[10px] font-mono shadow-2xl"></div>
+
+  <!-- Header -->
+  <header class="flex items-center justify-between py-1 border-b border-slate-800 mb-1.5 flex-shrink-0">
+    <div class="flex items-center gap-1.5">
+      <span class="text-sm">🧩</span>
+      <h1 class="text-xs font-bold text-sky-400">Lab Studuino Mobile</h1>
+    </div>
+    <div class="flex items-center gap-1.5">
+      <button onclick="openTutorial()" class="bg-indigo-600 active:bg-indigo-500 text-white px-2 py-0.5 rounded-full text-[9px] font-medium shadow">
+        🎮 Uji Motor
+      </button>
+      <div id="statusBadge" class="bg-slate-900 border border-slate-700 px-2 py-0.5 rounded-full text-[9px] font-mono text-slate-300">
+        Siap
+      </div>
+    </div>
+  </header>
+
+  <!-- Arena Simulasi -->
+  <div class="relative w-full aspect-[16/9] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner flex-shrink-0 mb-1.5">
+    <canvas id="simCanvas" class="w-full h-full block"></canvas>
+    
+    <div class="absolute top-1.5 left-1.5 bg-slate-950/90 backdrop-blur-sm border border-slate-800 rounded px-1.5 py-0.5 text-[9px] font-mono text-slate-300 flex gap-2">
+      <div>M1: <span id="hudM1" class="text-sky-400 font-bold">MATI</span></div>
+      <div>M2: <span id="hudM2" class="text-teal-400 font-bold">MATI</span></div>
+      <div>SENTUH: <span id="hudTouch" class="text-slate-500 font-bold">0</span></div>
+      <div>ARAH: <span id="hudHdg" class="text-amber-400 font-bold">0°</span></div>
+    </div>
+
+    <div class="absolute bottom-1.5 right-1.5 flex gap-1">
+      <button onclick="clearTrail()" class="bg-slate-900/80 active:bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded text-[9px]">Hapus</button>
+      <button onclick="stopAndReset()" class="bg-rose-950/80 active:bg-rose-900 text-rose-300 border border-rose-700/60 px-2 py-0.5 rounded text-[9px]">■ Reset</button>
+    </div>
+  </div>
+
+  <!-- PALET BLOK (Tarik blok baru dari sini ke area kode) -->
+  <div id="paletteBar" class="mb-1.5 flex-shrink-0 bg-slate-900/60 border border-slate-800 rounded-xl p-1.5 transition-colors">
+    <div class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1 flex justify-between">
+      <span>Palet Blok Baru (Tarik ke Bawah)</span>
+      <span class="text-slate-500 font-normal">Geser ➔</span>
+    </div>
+    
+    <div class="flex gap-1 overflow-x-auto no-scrollbar pb-0.5" style="touch-action: pan-x;">
+      <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab active:cursor-grabbing" data-type="M1_POWER_100">M1 DAYA 100</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab active:cursor-grabbing" data-type="M1_CW">M1 SEARAH ↻</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab active:cursor-grabbing" data-type="M1_CCW">M1 LAWAN ↺</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-rose-950 border border-rose-500/50 text-rose-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab active:cursor-grabbing" data-type="M1_BRAKE">M1 REM</div>
+
+      <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab active:cursor-grabbing" data-type="M2_POWER_100">M2 DAYA 100</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab active:cursor-grabbing" data-type="M2_CW">M2 SEARAH ↻</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab active:cursor-grabbing" data-type="M2_CCW">M2 LAWAN ↺</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-rose-950 border border-rose-500/50 text-rose-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab active:cursor-grabbing" data-type="M2_BRAKE">M2 REM</div>
+
+      <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab active:cursor-grabbing" data-type="WAIT">+ TUNGGU</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab active:cursor-grabbing" data-type="REPEAT_4">ULANGI 4x</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab active:cursor-grabbing" data-type="FOREVER">SELAMANYA</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab active:cursor-grabbing" data-type="IF_TOUCH">JIKA SENTUH</div>
+    </div>
+  </div>
+
+  <!-- AREA KERJA KODE (Scroll Mandiri & Drag Bebas) -->
+  <div id="workspaceContainer" class="flex-1 flex flex-col min-h-0 bg-slate-900/80 border border-slate-800 rounded-xl p-1.5 shadow-inner relative">
+    
+    <!-- Top Bar Workspace -->
+    <div class="flex justify-between items-center mb-1 flex-shrink-0">
+      <input id="studentName" type="text" placeholder="Nama / Kelompok" class="w-1/2 bg-slate-950 border border-slate-800 rounded px-2 py-0.5 text-[11px] text-slate-100 focus:outline-none focus:border-sky-500">
+      <div class="flex items-center gap-1">
+        <span class="text-[9px] text-slate-400">Seret ke luar untuk <b class="text-rose-400">hapus</b></span>
+        <button onclick="clearWorkspace()" class="px-2 py-0.5 bg-slate-800 active:bg-slate-700 text-slate-300 text-[10px] rounded">Kosongkan</button>
+      </div>
+    </div>
+
+    <!-- Scrollable Workspace Container -->
+    <div id="mainDropZone" class="flex-1 overflow-y-auto pr-0.5 flex flex-col gap-1.5" style="touch-action: pan-y;">
+      <!-- Blok yang disusun siswa muncul di sini -->
+    </div>
+  </div>
+
+  <!-- Tombol Eksekusi Bawah -->
+  <div class="grid grid-cols-2 gap-2 mt-1.5 flex-shrink-0">
+    <button id="runBtn" onclick="runSimulation()" class="w-full py-2 bg-sky-600 active:bg-sky-500 text-slate-950 font-bold rounded-xl text-xs transition shadow flex items-center justify-center gap-1">
+      <span>▶</span> Jalankan Simulasi
+    </button>
+    <button onclick="exportJSON()" class="w-full py-2 bg-slate-800 active:bg-slate-700 border border-slate-700 text-slate-100 font-semibold rounded-xl text-xs transition shadow flex items-center justify-center gap-1">
+      <span>📥</span> Unduh Misi
+    </button>
+  </div>
+
+  <!-- Modal Tutorial -->
+  <div id="tutorialModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm p-3 hidden flex items-center justify-center overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-4 shadow-2xl flex flex-col gap-2.5 my-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+        <h2 class="text-sm font-bold text-sky-400 flex items-center gap-1"><span>🎮</span> Panduan Drag &amp; Wrap</h2>
+        <button onclick="closeTutorial()" class="text-slate-400 font-bold text-sm px-2 py-0.5 rounded bg-slate-800">✕</button>
+      </div>
+      <p class="text-[10px] text-slate-300 leading-relaxed">
+        • <b>Seret Blok Baru:</b> Tarik blok dari palet atas dan letakkan di posisi mana saja.<br>
+        • <b>Pindahkan Posisi:</b> Sentuh dan tahan <b>≡</b> pada blok kode untuk memindahkannya ke atas, ke bawah, atau ke dalam kontainer.<br>
+        • <b>Membungkus Kode (Wrap):</b> Tarik blok kontainer (ULANGI / SELAMANYA / JIKA) dan arahkan ke blok yang ada. Garis oranye menandakan blok-blok di bawahnya akan otomatis dibungkus masuk ke dalamnya!<br>
+        • <b>Hapus Blok:</b> Cukup seret blok yang ada ke luar kotak area kode dan lepaskan.
+      </p>
+      <button onclick="closeTutorial()" class="w-full py-2 bg-sky-600 active:bg-sky-500 text-slate-950 font-bold rounded-xl text-xs transition">
+        Saya Mengerti
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    const statusBadge = document.getElementById('statusBadge');
+    const runBtn = document.getElementById('runBtn');
+    const workspaceContainer = document.getElementById('workspaceContainer');
+    const mainDropZone = document.getElementById('mainDropZone');
+    const touchGhost = document.getElementById('touchGhost');
+
+    const hudM1 = document.getElementById('hudM1');
+    const hudM2 = document.getElementById('hudM2');
+    const hudTouch = document.getElementById('hudTouch');
+    const hudHdg = document.getElementById('hudHdg');
+
+    const WHEEL_BASE = 40;
+    const MAX_LINEAR_SPEED = 75;
+    const TURN_DAMPING = 1.0;
+
+    let robot = {
+      x: 0,
+      y: 0,
+      angle: -Math.PI / 2,
+      m1: { power: 0, mode: 'STOP', phase: 0, currentSpeed: 0 },
+      m2: { power: 0, mode: 'STOP', phase: 0, currentSpeed: 0 }
+    };
+
+    let obstacle = { x: 0, y: 0, w: 32, h: 32 };
+    let pathHistory = [];
+    let isRunning = false;
+    let animFrame = null;
+    let lastPhysicsTime = 0;
+    let touchSensorActive = false;
+
+    // Pohon Program Awal
+    let programTree = [
+      { id: 1, type: 'M1_POWER_100', text: 'M1 KEKUATAN 100' },
+      { id: 2, type: 'M2_POWER_100', text: 'M2 KEKUATAN 100' },
+      { 
+        id: 3, 
+        type: 'REPEAT_4', 
+        text: 'ULANGI 4x',
+        children: [
+          { id: 4, type: 'M1_CW', text: 'M1 PUTAR SEARAH ↻' },
+          { id: 5, type: 'M2_CW', text: 'M2 PUTAR SEARAH ↻' },
+          { id: 6, type: 'WAIT', value: 1.0 }
+        ]
+      },
+      { id: 7, type: 'M1_BRAKE', text: 'M1 BERHENTI REM' },
+      { id: 8, type: 'M2_BRAKE', text: 'M2 BERHENTI REM' }
+    ];
+
+    let nextBlockId = 900;
+
+    function getBlockSpec(type) {
+      switch(type) {
+        case 'M1_POWER_100': return { text: 'M1 KEKUATAN 100', color: 'bg-sky-950 border-sky-500/80 text-sky-200' };
+        case 'M1_CW': return { text: 'M1 PUTAR SEARAH ↻', color: 'bg-sky-950 border-sky-500/80 text-sky-200' };
+        case 'M1_CCW': return { text: 'M1 PUTAR LAWAN ↺', color: 'bg-sky-950 border-sky-500/80 text-sky-200' };
+        case 'M1_BRAKE': return { text: 'M1 BERHENTI REM', color: 'bg-rose-950 border-rose-500/80 text-rose-200' };
+        case 'M2_POWER_100': return { text: 'M2 KEKUATAN 100', color: 'bg-teal-950 border-teal-500/80 text-teal-200' };
+        case 'M2_CW': return { text: 'M2 PUTAR SEARAH ↻', color: 'bg-teal-950 border-teal-500/80 text-teal-200' };
+        case 'M2_CCW': return { text: 'M2 PUTAR LAWAN ↺', color: 'bg-teal-950 border-teal-500/80 text-teal-200' };
+        case 'M2_BRAKE': return { text: 'M2 BERHENTI REM', color: 'bg-rose-950 border-rose-500/80 text-rose-200' };
+        case 'WAIT': return { isWait: true, color: 'bg-amber-950 border-amber-500/80 text-amber-200' };
+        case 'REPEAT_4': return { text: 'ULANGI 4x', isContainer: true, color: 'bg-amber-950/80 border-amber-500 text-amber-300' };
+        case 'FOREVER': return { text: 'SELAMANYA', isContainer: true, color: 'bg-amber-950/80 border-amber-500 text-amber-300' };
+        case 'IF_TOUCH': return { text: 'JIKA SENTUH MAKA', isContainer: true, color: 'bg-amber-950/80 border-amber-500 text-amber-300' };
+      }
+      return { text: type, color: 'bg-slate-800 border-slate-600 text-white' };
+    }
+
+    function createNode(type) {
+      const spec = getBlockSpec(type);
+      const node = { id: nextBlockId++, type: type };
+      if (spec.isWait) node.value = 1.0;
+      else node.text = spec.text;
+      if (spec.isContainer) node.children = [];
+      return node;
+    }
+
+    function updateWaitValue(id, val) {
+      const node = findNodeById(programTree, id);
+      if (node) {
+        const parsed = parseFloat(val);
+        node.value = isNaN(parsed) || parsed < 0.1 ? 0.1 : Math.round(parsed * 10) / 10;
+      }
+    }
+
+    // ============================================================
+    // UNIVERSAL TOUCH / DRAG ENGINE WITH SCRATCH WRAP LOGIC
+    // ============================================================
+    let activeDrag = null; // { isNew, type, id, ghostText, startX, startY }
+    let lastDropTarget = null;
+    let lastDropPos = null; // 'before' | 'after' | 'inside' | 'wrap' | 'delete'
+    let hasMovedThreshold = false;
+
+    function initPaletteTouch() {
+      document.querySelectorAll('.palette-item').forEach(item => {
+        item.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          const type = item.dataset.type;
+          startUniversalDrag(e, { 
+            isNew: true, 
+            type: type, 
+            ghostText: item.textContent,
+            startX: e.clientX,
+            startY: e.clientY
+          });
+        });
+      });
+    }
+
+    function startUniversalDrag(e, payload) {
+      activeDrag = payload;
+      hasMovedThreshold = false;
+      lastDropTarget = null;
+      lastDropPos = null;
+
+      touchGhost.textContent = payload.ghostText;
+      touchGhost.style.left = `${e.clientX}px`;
+      touchGhost.style.top = `${e.clientY - 25}px`;
+
+      if (!payload.isNew) {
+        const originalEl = document.querySelector(`[data-block-id="${payload.id}"]`);
+        if (originalEl) originalEl.classList.add('is-moving');
+      }
+
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+      window.addEventListener('pointercancel', onPointerUp);
+    }
+
+    function onPointerMove(e) {
+      if (!activeDrag) return;
+
+      const dist = Math.hypot(e.clientX - activeDrag.startX, e.clientY - activeDrag.startY);
+      if (dist > 6) {
+        hasMovedThreshold = true;
+        touchGhost.style.display = 'block';
+      }
+
+      touchGhost.style.left = `${e.clientX}px`;
+      touchGhost.style.top = `${e.clientY - 25}px`;
+
+      clearAllIndicators();
+
+      // Auto-scroll workspace jika kursor mendekati batas atas/bawah
+      const dropRect = mainDropZone.getBoundingClientRect();
+      if (e.clientY < dropRect.top + 25) {
+        mainDropZone.scrollTop -= 6;
+      } else if (e.clientY > dropRect.bottom - 25) {
+        mainDropZone.scrollTop += 6;
+      }
+
+      const target = document.elementFromPoint(e.clientX, e.clientY);
+      if (!target) return;
+
+      // DETEKSI 3: JIKA DISERET KE LUAR AREA KODE -> TANDAI HAPUS (TANPA TEMPAT SAMPAH)
+      const isInsideWorkspace = target.closest('#mainDropZone');
+      if (!activeDrag.isNew && !isInsideWorkspace) {
+        lastDropTarget = null;
+        lastDropPos = 'delete';
+        workspaceContainer.classList.add('outline', 'outline-2', 'outline-rose-500/50');
+        return;
+      } else {
+        workspaceContainer.classList.remove('outline', 'outline-2', 'outline-rose-500/50');
+      }
+
+      const insideSlot = target.closest('[data-inside-slot]');
+      const blockEl = target.closest('[data-block-id]');
+
+      if (insideSlot) {
+        insideSlot.classList.add('drop-indicator-inside');
+        lastDropTarget = insideSlot;
+        lastDropPos = 'inside';
+      } else if (blockEl) {
+        if (!activeDrag.isNew && parseInt(blockEl.dataset.blockId) === activeDrag.id) {
+          lastDropTarget = null;
+          return;
+        }
+
+        const rect = blockEl.getBoundingClientRect();
+        const relY = e.clientY - rect.top;
+        const spec = getBlockSpec(activeDrag.type || findNodeById(programTree, activeDrag.id)?.type);
+
+        // DETEKSI 4: SCRATCH WRAP-AROUND FITUR UNTUK KONTAINER
+        // Jika blok yang diseret adalah kontainer (ULANGI / SELAMANYA / JIKA)
+        // dan diarahkan ke tengah blok lain -> beri preview membungkus
+        if (spec.isContainer && relY > rect.height * 0.25 && relY < rect.height * 0.75) {
+          blockEl.classList.add('drop-indicator-wrap');
+          lastDropPos = 'wrap';
+        } else if (relY < rect.height * 0.5) {
+          blockEl.classList.add('drop-indicator-top');
+          lastDropPos = 'before';
+        } else {
+          blockEl.classList.add('drop-indicator-bottom');
+          lastDropPos = 'after';
+        }
+        lastDropTarget = blockEl;
+      } else {
+        lastDropTarget = null;
+        lastDropPos = null;
+      }
+    }
+
+    function onPointerUp(e) {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+      touchGhost.style.display = 'none';
+      workspaceContainer.classList.remove('outline', 'outline-2', 'outline-rose-500/50');
+
+      document.querySelectorAll('.is-moving').forEach(el => el.classList.remove('is-moving'));
+
+      if (activeDrag) {
+        // KASUS A: TAP CEPAT PALET -> TAMBAH 1 KE PALING BAWAH
+        if (activeDrag.isNew && !hasMovedThreshold) {
+          programTree.push(createNode(activeDrag.type));
+          renderWorkspace();
+        }
+        // KASUS B: SERET KE LUAR KODE -> HAPUS DARI PROGRAM
+        else if (!activeDrag.isNew && lastDropPos === 'delete') {
+          extractNodeById(programTree, activeDrag.id);
+          renderWorkspace();
+        }
+        // KASUS C: DROP TARGET DITEMUKAN (BEFORE / AFTER / INSIDE / WRAP)
+        else if (lastDropTarget) {
+          let nodeToInsert = null;
+          if (activeDrag.isNew) {
+            nodeToInsert = createNode(activeDrag.type);
+          } else {
+            nodeToInsert = extractNodeById(programTree, activeDrag.id);
+          }
+
+          if (nodeToInsert) {
+            if (lastDropPos === 'inside') {
+              const containerId = parseInt(lastDropTarget.dataset.insideSlot);
+              const container = findNodeById(programTree, containerId);
+              if (container && container.children && container.id !== nodeToInsert.id) {
+                container.children.push(nodeToInsert);
+              }
+            } else if (lastDropPos === 'wrap') {
+              // IMPLEMENTASI FITUR 4: BUNGKUS BLOK-BLOK DI SEKITARNYA KE DALAM MULUT KONTAINER
+              const targetId = parseInt(lastDropTarget.dataset.blockId);
+              wrapExistingCodeInside(programTree, targetId, nodeToInsert);
+            } else {
+              const targetId = parseInt(lastDropTarget.dataset.blockId);
+              if (targetId && targetId !== nodeToInsert.id) {
+                insertNearNode(programTree, targetId, nodeToInsert, lastDropPos);
+              }
+            }
+          }
+          renderWorkspace();
+        }
+        // KASUS D: DRAG BLOK BARU KE AREA KOSONG
+        else if (activeDrag.isNew && hasMovedThreshold) {
+          const target = document.elementFromPoint(e.clientX, e.clientY);
+          if (target && target.closest('#mainDropZone')) {
+            programTree.push(createNode(activeDrag.type));
+            renderWorkspace();
+          }
+        }
+      }
+
+      clearAllIndicators();
+      activeDrag = null;
+      lastDropTarget = null;
+      lastDropPos = null;
+      hasMovedThreshold = false;
+    }
+
+    function clearAllIndicators() {
+      document.querySelectorAll('.drop-indicator-top, .drop-indicator-bottom, .drop-indicator-inside, .drop-indicator-wrap').forEach(el => {
+        el.classList.remove('drop-indicator-top', 'drop-indicator-bottom', 'drop-indicator-inside', 'drop-indicator-wrap');
+      });
+    }
+
+    // ============================================================
+    // LOGIKA SCRATCH WRAP-AROUND (FITUR 4)
+    // ============================================================
+    function wrapExistingCodeInside(list, targetId, containerNode) {
+      for (let i = 0; i < list.length; i++) {
+        if (list[i].id === targetId) {
+          // Ambil blok target dan blok-blok di bawahnya yang selevel untuk dimasukkan ke dalam wadah
+          const wrappedBlocks = list.splice(i);
+          if (!containerNode.children) containerNode.children = [];
+          containerNode.children.push(...wrappedBlocks);
+          // Tempatkan blok kontainer yang sekarang membungkus blok-blok tersebut
+          list.splice(i, 0, containerNode);
+          return true;
+        }
+        if (list[i].children) {
+          if (wrapExistingCodeInside(list[i].children, targetId, containerNode)) return true;
+        }
+      }
+      return false;
+    }
+
+    // Navigasi Data Tree
+    function findNodeById(list, id) {
+      for (let n of list) {
+        if (n.id === id) return n;
+        if (n.children) {
+          const res = findNodeById(n.children, id);
+          if (res) return res;
+        }
+      }
+      return null;
+    }
+
+    function extractNodeById(list, id) {
+      for (let i = 0; i < list.length; i++) {
+        if (list[i].id === id) return list.splice(i, 1)[0];
+        if (list[i].children) {
+          const res = extractNodeById(list[i].children, id);
+          if (res) return res;
+        }
+      }
+      return null;
+    }
+
+    function insertNearNode(list, targetId, newNode, place) {
+      for (let i = 0; i < list.length; i++) {
+        if (list[i].id === targetId) {
+          const idx = place === 'before' ? i : i + 1;
+          list.splice(idx, 0, newNode);
+          return true;
+        }
+        if (list[i].children) {
+          if (insertNearNode(list[i].children, targetId, newNode, place)) return true;
+        }
+      }
+      return false;
+    }
+
+    function deleteNode(id) {
+      extractNodeById(programTree, id);
+      renderWorkspace();
+    }
+
+    function clearWorkspace() {
+      if (confirm('Kosongkan semua susunan blok?')) {
+        programTree = [];
+        renderWorkspace();
+      }
+    }
+
+    // ============================================================
+    // RENDERING WORKSPACE DENGAN PEGANGAN PINDAH FLEKSIBEL
+    // ============================================================
+    function renderWorkspace() {
+      mainDropZone.innerHTML = '';
+      if (programTree.length === 0) {
+        mainDropZone.innerHTML = `
+          <div class="text-center my-auto py-8 text-slate-500 text-[10px]">
+            Tarik blok dari palet ke sini untuk menyusun program robot.
+          </div>
+        `;
+        return;
+      }
+
+      function buildDOM(nodes, parentEl) {
+        nodes.forEach(node => {
+          const spec = getBlockSpec(node.type);
+          const blockEl = document.createElement('div');
+          blockEl.dataset.blockId = node.id;
+
+          if (spec.isWait) {
+            blockEl.className = `rounded-lg border ${spec.color} px-2 py-1 shadow-sm text-[10px] font-mono flex items-center justify-between transition-all`;
+            blockEl.innerHTML = `
+              <div class="flex items-center gap-1.5 flex-1">
+                <span class="drag-handle cursor-grab active:cursor-grabbing text-amber-400 font-bold px-1.5 py-0.5 select-none text-xs bg-amber-950/80 rounded border border-amber-500/40">≡</span>
+                <span>TUNGGU</span>
+                <input type="number" step="0.1" min="0.1" max="10" value="${node.value || 1.0}" onchange="updateWaitValue(${node.id}, this.value)" class="w-11 bg-slate-900 border border-amber-500/60 rounded px-1 py-0.5 text-center font-bold text-amber-300 text-[10px]">
+                <span>d</span>
+              </div>
+              <button onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs">✕</button>
+            `;
+          } else if (spec.isContainer) {
+            blockEl.className = `rounded-xl border ${spec.color} p-1 shadow-sm text-xs flex flex-col gap-1 transition-all`;
+            blockEl.innerHTML = `
+              <div class="flex items-center justify-between font-mono font-bold text-[10px] px-1">
+                <div class="flex items-center gap-1.5">
+                  <span class="drag-handle cursor-grab active:cursor-grabbing text-amber-400 font-bold px-1.5 py-0.5 select-none text-xs bg-amber-950 rounded border border-amber-500/40">≡</span>
+                  <span>📂 ${escapeHtml(node.text)}</span>
+                </div>
+                <button onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs">✕</button>
+              </div>
+              <div data-inside-slot="${node.id}" class="ml-3 pl-1.5 py-1 border-l-2 border-dashed border-amber-500/60 bg-slate-950/50 rounded-r flex flex-col gap-1 min-h-[30px] transition-all">
+              </div>
+              <div class="text-[8px] font-mono text-amber-500/60 px-1 uppercase tracking-wider">▲ Selesai</div>
+            `;
+            const innerSlot = blockEl.querySelector('[data-inside-slot]');
+            buildDOM(node.children || [], innerSlot);
+          } else {
+            blockEl.className = `rounded-lg border ${spec.color} px-2 py-1 shadow-sm text-[10px] font-mono flex items-center justify-between transition-all`;
+            blockEl.innerHTML = `
+              <div class="flex items-center gap-1.5">
+                <span class="drag-handle cursor-grab active:cursor-grabbing text-slate-300 font-bold px-1.5 py-0.5 select-none text-xs bg-slate-900 rounded border border-slate-700">≡</span>
+                <span>${escapeHtml(node.text)}</span>
+              </div>
+              <button onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs">✕</button>
+            `;
+          }
+
+          // Pasang touch listener pada pegangan ≡ untuk pemindahan/reorder
+          const handle = blockEl.querySelector('.drag-handle');
+          if (handle) {
+            handle.addEventListener('pointerdown', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              startUniversalDrag(e, { 
+                isNew: false, 
+                id: node.id, 
+                type: node.type,
+                ghostText: node.text || (node.type === 'WAIT' ? `TUNGGU ${node.value}s` : 'BLOK'),
+                startX: e.clientX,
+                startY: e.clientY
+              });
+            });
+          }
+
+          parentEl.appendChild(blockEl);
+        });
+      }
+
+      buildDOM(programTree, mainDropZone);
+    }
+
+    // ============================================================
+    // SIMULASI ARENA FISIKA
+    // ============================================================
+    function initCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+
+      obstacle.x = (rect.width / 2) - 16;
+      obstacle.y = 35;
+      stopAndReset();
+      renderWorkspace();
+      initPaletteTouch();
+    }
+    window.addEventListener('resize', initCanvas);
+    setTimeout(initCanvas, 50);
+
+    function stopAndReset() {
+      isRunning = false;
+      if (animFrame) cancelAnimationFrame(animFrame);
+      const rect = canvas.getBoundingClientRect();
+      robot.x = rect.width / 2;
+      robot.y = rect.height / 2 + 40;
+      robot.angle = -Math.PI / 2;
+      robot.m1 = { power: 0, mode: 'STOP', phase: 0, currentSpeed: 0 };
+      robot.m2 = { power: 0, mode: 'STOP', phase: 0, currentSpeed: 0 };
+      pathHistory = [{ x: robot.x, y: robot.y }];
+      touchSensorActive = false;
+      updateHud();
+      drawScene();
+      statusBadge.textContent = 'Siap';
+      statusBadge.className = 'bg-slate-900 border border-slate-700 px-2 py-0.5 rounded-full text-[9px] font-mono text-slate-400';
+    }
+
+    function clearTrail() {
+      pathHistory = [{ x: robot.x, y: robot.y }];
+      drawScene();
+    }
+
+    function checkCollision() {
+      const rect = canvas.getBoundingClientRect();
+      if (robot.x <= 14 || robot.x >= rect.width - 14 || robot.y <= 14 || robot.y >= rect.height - 14) return true;
+      if (robot.x + 12 >= obstacle.x && robot.x - 12 <= obstacle.x + obstacle.w &&
+          robot.y + 12 >= obstacle.y && robot.y - 12 <= obstacle.y + obstacle.h) return true;
+      return false;
+    }
+
+    function updateHud() {
+      const m1Active = robot.m1.mode !== 'STOP' && robot.m1.power > 0;
+      const m2Active = robot.m2.mode !== 'STOP' && robot.m2.power > 0;
+      hudM1.textContent = m1Active ? `${robot.m1.mode === 'CLOCKWISE' ? 'CW' : 'CCW'} ${robot.m1.power}` : 'MATI';
+      hudM2.textContent = m2Active ? `${robot.m2.mode === 'CLOCKWISE' ? 'CW' : 'CCW'} ${robot.m2.power}` : 'MATI';
+      hudTouch.textContent = touchSensorActive ? '1' : '0';
+      hudTouch.className = touchSensorActive ? 'text-rose-400 font-bold animate-pulse' : 'text-slate-500';
+      let deg = Math.round(((robot.angle + Math.PI / 2) * (180 / Math.PI)) % 360);
+      if (deg < 0) deg += 360;
+      hudHdg.textContent = `${deg}°`;
+    }
+
+    function drawScene() {
+      const rect = canvas.getBoundingClientRect();
+      ctx.clearRect(0, 0, rect.width, rect.height);
+
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < rect.width; x += 22) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, rect.height); ctx.stroke();
+      }
+      for (let y = 0; y < rect.height; y += 22) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(rect.width, y); ctx.stroke();
+      }
+
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.roundRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h, 4);
+      ctx.fill();
+      ctx.fillStyle = '#fecaca';
+      ctx.font = '8px monospace';
+      ctx.fillText('HALANGAN', obstacle.x - 4, obstacle.y + 18);
+
+      if (pathHistory.length > 1) {
+        ctx.strokeStyle = '#0284c7';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(pathHistory[0].x, pathHistory[0].y);
+        for (let i = 1; i < pathHistory.length; i++) ctx.lineTo(pathHistory[i].x, pathHistory[i].y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      ctx.save();
+      ctx.translate(robot.x, robot.y);
+      ctx.rotate(robot.angle);
+
+      drawWheel(0, -WHEEL_BASE / 2, robot.m1.phase, '#38bdf8');
+      drawWheel(0, WHEEL_BASE / 2, robot.m2.phase, '#2dd4bf');
+
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath();
+      ctx.roundRect(-14, -13, 28, 26, 3);
+      ctx.fill();
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.moveTo(14, 0);
+      ctx.lineTo(8, -5);
+      ctx.lineTo(8, 5);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = touchSensorActive ? '#f43f5e' : '#64748b';
+      ctx.fillRect(14, -3.5, 3, 7);
+
+      ctx.restore();
+    }
+
+    function drawWheel(x, y, phase, accent) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(-10, -3.5, 20, 7);
+      ctx.fillStyle = accent;
+      ctx.fillRect(-7, -2, 14, 4);
+
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1;
+      const offset = (phase % 6);
+      for (let tx = -8 + offset; tx <= 9; tx += 6) {
+        ctx.beginPath();
+        ctx.moveTo(tx, -3.5);
+        ctx.lineTo(tx, 3.5);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    function stepPhysics(dt) {
+      const rect = canvas.getBoundingClientRect();
+
+      let target1 = 0, target2 = 0;
+      if (robot.m1.mode === 'CLOCKWISE' && robot.m1.power > 0) target1 = robot.m1.power;
+      else if (robot.m1.mode === 'COUNTERCLOCKWISE' && robot.m1.power > 0) target1 = -robot.m1.power;
+
+      if (robot.m2.mode === 'CLOCKWISE' && robot.m2.power > 0) target2 = robot.m2.power;
+      else if (robot.m2.mode === 'COUNTERCLOCKWISE' && robot.m2.power > 0) target2 = -robot.m2.power;
+
+      const accelRate = 400 * dt;
+      robot.m1.currentSpeed += Math.max(-accelRate, Math.min(accelRate, target1 - robot.m1.currentSpeed));
+      robot.m2.currentSpeed += Math.max(-accelRate, Math.min(accelRate, target2 - robot.m2.currentSpeed));
+
+      const vLeft = (robot.m1.currentSpeed / 100) * MAX_LINEAR_SPEED;
+      const vRight = (robot.m2.currentSpeed / 100) * MAX_LINEAR_SPEED;
+
+      const vLinear = (vLeft + vRight) / 2;
+      const omega = ((vRight - vLeft) / WHEEL_BASE) * TURN_DAMPING;
+
+      robot.angle += omega * dt;
+      robot.x += Math.cos(robot.angle) * vLinear * dt;
+      robot.y += Math.sin(robot.angle) * vLinear * dt;
+
+      robot.m1.phase += (vLeft * dt * 0.4);
+      robot.m2.phase += (vRight * dt * 0.4);
+
+      robot.x = Math.max(14, Math.min(rect.width - 14, robot.x));
+      robot.y = Math.max(14, Math.min(rect.height - 14, robot.y));
+
+      touchSensorActive = checkCollision();
+
+      const lastPoint = pathHistory[pathHistory.length - 1];
+      if (Math.hypot(robot.x - lastPoint.x, robot.y - lastPoint.y) > 4) {
+        pathHistory.push({ x: robot.x, y: robot.y });
+      }
+
+      updateHud();
+      drawScene();
+    }
+
+    async function executeAst(nodes) {
+      for (const node of nodes) {
+        if (!isRunning) return;
+        statusBadge.textContent = node.text || (node.type === 'WAIT' ? `TUNGGU ${node.value}s` : node.type);
+
+        switch(node.type) {
+          case 'M1_POWER_100': robot.m1.power = 100; updateHud(); break;
+          case 'M1_CW': robot.m1.mode = 'CLOCKWISE'; updateHud(); break;
+          case 'M1_CCW': robot.m1.mode = 'COUNTERCLOCKWISE'; updateHud(); break;
+          case 'M1_BRAKE': robot.m1.mode = 'STOP'; updateHud(); break;
+
+          case 'M2_POWER_100': robot.m2.power = 100; updateHud(); break;
+          case 'M2_CW': robot.m2.mode = 'CLOCKWISE'; updateHud(); break;
+          case 'M2_CCW': robot.m2.mode = 'COUNTERCLOCKWISE'; updateHud(); break;
+          case 'M2_BRAKE': robot.m2.mode = 'STOP'; updateHud(); break;
+
+          case 'WAIT':
+            const durationMs = (node.value || 1.0) * 1000;
+            const start = performance.now();
+            while (isRunning && (performance.now() - start < durationMs)) {
+              await new Promise(r => setTimeout(r, 16));
+            }
+            break;
+
+          case 'REPEAT_4':
+            for (let c = 0; c < 4; c++) {
+              if (!isRunning) break;
+              await executeAst(node.children || []);
+            }
+            break;
+
+          case 'FOREVER':
+            let count = 0;
+            while (isRunning && count < 200) {
+              await executeAst(node.children || []);
+              count++;
+              await new Promise(r => setTimeout(r, 16));
+            }
+            break;
+
+          case 'IF_TOUCH':
+            if (touchSensorActive) {
+              await executeAst(node.children || []);
+            }
+            break;
+        }
+      }
+    }
+
+    function mainPhysicsLoop(now) {
+      if (!isRunning) return;
+      if (!lastPhysicsTime) lastPhysicsTime = now;
+      const dt = Math.min((now - lastPhysicsTime) / 1000, 0.05);
+      lastPhysicsTime = now;
+
+      stepPhysics(dt);
+      animFrame = requestAnimationFrame(mainPhysicsLoop);
+    }
+
+    async function runSimulation() {
+      if (programTree.length === 0) {
+        alert('Susun blok perintah terlebih dahulu.');
+        return;
+      }
+
+      isRunning = true;
+      lastPhysicsTime = performance.now();
+      if (animFrame) cancelAnimationFrame(animFrame);
+      animFrame = requestAnimationFrame(mainPhysicsLoop);
+
+      await executeAst(programTree);
+
+      const m1Active = robot.m1.mode !== 'STOP' && robot.m1.power > 0;
+      const m2Active = robot.m2.mode !== 'STOP' && robot.m2.power > 0;
+
+      if (m1Active || m2Active) {
+        statusBadge.textContent = 'Berjalan Terus';
+        statusBadge.className = 'bg-sky-900 border border-sky-600 px-2 py-0.5 rounded-full text-[9px] font-mono text-sky-200 animate-pulse';
+      } else {
+        statusBadge.textContent = 'Selesai';
+        statusBadge.className = 'bg-slate-900 border border-slate-700 px-2 py-0.5 rounded-full text-[9px] font-mono text-slate-300';
+      }
+    }
+
+    function exportJSON() {
+      const studentName = document.getElementById('studentName').value.trim() || 'siswa';
+      if (programTree.length === 0) {
+        alert('Tidak ada blok program untuk diekspor.');
+        return;
+      }
+
+      function treeToText(nodes, indent = '') {
+        let lines = [];
+        nodes.forEach(n => {
+          if (n.type === 'WAIT') {
+            lines.push(`${indent}TUNGGU ${n.value || 1.0}`);
+          } else if (n.type === 'REPEAT_4') {
+            lines.push(`${indent}ULANGI 4`);
+            lines.push(...treeToText(n.children || [], indent + '  '));
+            lines.push(`${indent}SELESAI_ULANGI`);
+          } else if (n.type === 'FOREVER') {
+            lines.push(`${indent}SELAMANYA`);
+            lines.push(...treeToText(n.children || [], indent + '  '));
+            lines.push(`${indent}SELESAI_SELAMANYA`);
+          } else if (n.type === 'IF_TOUCH') {
+            lines.push(`${indent}JIKA SENTUH_DITEKAN MAKA`);
+            lines.push(...treeToText(n.children || [], indent + '  '));
+            lines.push(`${indent}SELESAI_JIKA`);
+          } else {
+            lines.push(`${indent}${n.text}`);
+          }
+        });
+        return lines;
+      }
+
+      const rawLines = treeToText(programTree);
+
+      const payload = {
+        meta: {
+          app: "StuduinoScratchLab_ScratchWrap",
+          version: "26.0",
+          student: studentName,
+          exportedAt: new Date().toISOString()
+        },
+        rawLines: rawLines,
+        blockTree: programTree
+      };
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const safeName = studentName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      a.href = url;
+      a.download = `${safeName}_misi_blok.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function openTutorial() { document.getElementById('tutorialModal').classList.remove('hidden'); }
+    function closeTutorial() { document.getElementById('tutorialModal').classList.add('hidden'); }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

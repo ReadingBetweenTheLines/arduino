@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teacher Hub - Studuino Translator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom scrollbar for clean code display */
+    pre::-webkit-scrollbar { height: 6px; width: 6px; }
+    pre::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans p-6">
+
+  <!-- Top Header -->
+  <header class="max-w-6xl w-full mx-auto flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-xl">
+        🎓
+      </div>
+      <div>
+        <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+          Studuino Mission Hub <span class="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30">Teacher Edition</span>
+        </h1>
+        <p class="text-xs text-slate-400">Import student mission JSONs and translate directly into Studuino C++ (.ino)</p>
+      </div>
+    </div>
+    <div class="text-right text-xs text-slate-500">
+      <div>Hardware Profile: <span class="text-slate-300 font-mono">2-Motor Car (M1/M2)</span></div>
+      <div>Target: <span class="text-emerald-400 font-mono">Studuino.h</span></div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl w-full mx-auto grid grid-cols-12 gap-6 flex-1">
+    
+    <!-- Left Column: File Ingestion & Queue (4 Cols) -->
+    <div class="col-span-12 lg:col-span-4 flex flex-col gap-4">
+      
+      <!-- Drag and Drop Dropzone -->
+      <div id="dropZone" class="border-2 border-dashed border-slate-700 hover:border-emerald-500 bg-slate-900/50 hover:bg-slate-900 rounded-2xl p-6 text-center transition cursor-pointer flex flex-col items-center justify-center min-h-[160px]">
+        <input type="file" id="fileInput" multiple accept=".json" class="hidden">
+        <div class="text-3xl mb-2">📂</div>
+        <div class="text-sm font-semibold text-slate-200">Drop student mission files</div>
+        <div class="text-xs text-slate-500 mt-1">or click to browse (.json)</div>
+      </div>
+
+      <!-- Queue Header -->
+      <div class="flex items-center justify-between px-1">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Loaded Submissions (<span id="fileCount">0</span>)</span>
+        <button onclick="clearAllSubmissions()" class="text-xs text-rose-400 hover:text-rose-300 transition">Clear All</button>
+      </div>
+
+      <!-- Queue List -->
+      <div id="submissionsList" class="flex-1 overflow-y-auto max-h-[500px] flex flex-col gap-2 pr-1">
+        <div id="emptyPlaceholder" class="p-6 text-center text-xs text-slate-600 border border-slate-900 rounded-xl">
+          No student files loaded yet. Drop files above.
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Inspector & Code Generator (8 Cols) -->
+    <div class="col-span-12 lg:col-span-8 flex flex-col gap-4">
+      
+      <!-- Active Metadata Card -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex items-center justify-between">
+        <div>
+          <div class="text-xs text-slate-500 font-medium">Selected Mission</div>
+          <div id="activeStudentName" class="text-lg font-bold text-emerald-400">No mission selected</div>
+          <div id="activeMetaDetails" class="text-xs text-slate-400 font-mono mt-0.5">---</div>
+        </div>
+        <div class="flex gap-2">
+          <button id="copyBtn" onclick="copyCppCode()" disabled class="px-4 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed border border-slate-700 text-xs font-semibold rounded-xl transition flex items-center gap-1.5">
+            📋 <span>Copy Code</span>
+          </button>
+          <button id="downloadInoBtn" onclick="downloadInoFile()" disabled class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 text-xs font-bold rounded-xl transition shadow-lg shadow-emerald-950/40 flex items-center gap-1.5">
+            💾 <span>Download .ino</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Side-by-side View: Pseudocode Steps vs Generated C++ -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+        
+        <!-- Raw Pseudocode Steps -->
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 flex flex-col">
+          <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+            <span>Original Pseudocode</span>
+            <span id="stepCountBadge" class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400">0 steps</span>
+          </div>
+          <div id="pseudoDisplay" class="flex-1 font-mono text-xs text-amber-300/90 whitespace-pre-wrap bg-slate-950 p-3 rounded-xl border border-slate-800/80 overflow-y-auto max-h-[460px]">
+// Select a student from the list to preview commands
+          </div>
+        </div>
+
+        <!-- Generated Studuino C++ -->
+        <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-4 flex flex-col">
+          <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+            <span>Studuino C++ Output</span>
+            <span class="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800/50 px-2 py-0.5 rounded">Arduino Ready</span>
+          </div>
+          <pre id="cppDisplay" class="flex-1 font-mono text-xs text-emerald-400 bg-slate-950 p-3 rounded-xl border border-slate-800/80 overflow-y-auto max-h-[460px] leading-relaxed">
+// Click on a loaded student mission to compile C++ code
+          </pre>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    let submissions = [];
+    let activeIndex = -1;
+
+    // Elements
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const submissionsList = document.getElementById('submissionsList');
+    const emptyPlaceholder = document.getElementById('emptyPlaceholder');
+    const fileCount = document.getElementById('fileCount');
+    const activeStudentName = document.getElementById('activeStudentName');
+    const activeMetaDetails = document.getElementById('activeMetaDetails');
+    const stepCountBadge = document.getElementById('stepCountBadge');
+    const pseudoDisplay = document.getElementById('pseudoDisplay');
+    const cppDisplay = document.getElementById('cppDisplay');
+    const copyBtn = document.getElementById('copyBtn');
+    const downloadInoBtn = document.getElementById('downloadInoBtn');
+
+    // Drag and Drop Listeners
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('border-emerald-500', 'bg-slate-900');
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('border-emerald-500', 'bg-slate-900');
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-emerald-500', 'bg-slate-900');
+      handleFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+    function handleFiles(files) {
+      Array.from(files).forEach(file => {
+        if (!file.name.endsWith('.json')) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          try {
+            const data = JSON.parse(e.target.result);
+            // Validate minimum expected schema
+            if (!data.program || !Array.isArray(data.program)) {
+              alert(`File "${file.name}" does not match the mission schema.`);
+              return;
+            }
+            submissions.push({
+              fileName: file.name,
+              data: data,
+              cCode: generateStuduinoCpp(data)
+            });
+            updateQueueUI();
+            if (activeIndex === -1) selectSubmission(submissions.length - 1);
+          } catch (err) {
+            console.error("Parse error:", err);
+            alert(`Could not parse ${file.name}`);
+          }
+        };
+        reader.readAsText(file);
+      });
+      fileInput.value = '';
+    }
+
+    function updateQueueUI() {
+      fileCount.textContent = submissions.length;
+      if (submissions.length === 0) {
+        emptyPlaceholder.style.display = 'block';
+        submissionsList.innerHTML = '';
+        submissionsList.appendChild(emptyPlaceholder);
+        resetActiveDisplay();
+        return;
+      }
+      emptyPlaceholder.style.display = 'none';
+      submissionsList.innerHTML = '';
+
+      submissions.forEach((item, index) => {
+        const student = item.data.meta?.student || item.data.student || 'Unknown Student';
+        const steps = item.data.program.length;
+        const isSelected = index === activeIndex;
+
+        const el = document.createElement('div');
+        el.onclick = () => selectSubmission(index);
+        el.className = `p-3 rounded-xl border text-left cursor-pointer transition flex items-center justify-between ${
+          isSelected 
+            ? 'bg-emerald-950/40 border-emerald-500/60 text-white' 
+            : 'bg-slate-900/60 border-slate-800 hover:border-slate-700 text-slate-300'
+        }`;
+        
+        el.innerHTML = `
+          <div>
+            <div class="text-xs font-bold">${escapeHtml(student)}</div>
+            <div class="text-[10px] text-slate-500 font-mono mt-0.5">${escapeHtml(item.fileName)}</div>
+          </div>
+          <div class="text-right">
+            <span class="text-[11px] font-mono text-emerald-400 font-medium">${steps} steps</span>
+          </div>
+        `;
+        submissionsList.appendChild(el);
+      });
+    }
+
+    function selectSubmission(index) {
+      activeIndex = index;
+      updateQueueUI();
+      const current = submissions[index];
+      const data = current.data;
+      const student = data.meta?.student || data.student || 'Student';
+
+      activeStudentName.textContent = student;
+      activeMetaDetails.textContent = `${current.fileName} • ${data.program.length} commands`;
+      stepCountBadge.textContent = `${data.program.length} steps`;
+
+      // Render raw pseudocode
+      const rawLines = data.program.map(cmd => cmd.raw || `${cmd.cmd} ${cmd.speed || ''} ${cmd.time ? 'FOR ' + cmd.time : ''}`).join('\n');
+      pseudoDisplay.textContent = rawLines || '// No commands listed';
+
+      // Render C++
+      cppDisplay.textContent = current.cCode;
+
+      copyBtn.disabled = false;
+      downloadInoBtn.disabled = false;
+    }
+
+    function resetActiveDisplay() {
+      activeIndex = -1;
+      activeStudentName.textContent = 'No mission selected';
+      activeMetaDetails.textContent = '---';
+      stepCountBadge.textContent = '0 steps';
+      pseudoDisplay.textContent = '// Select a student from the list to preview commands';
+      cppDisplay.textContent = '// Click on a loaded student mission to compile C++ code';
+      copyBtn.disabled = true;
+      downloadInoBtn.disabled = true;
+    }
+
+    function clearAllSubmissions() {
+      if (confirm('Clear all submissions from the queue?')) {
+        submissions = [];
+        resetActiveDisplay();
+        updateQueueUI();
+      }
+    }
+
+    // The Studuino C++ Translation Engine
+    function generateStuduinoCpp(mission) {
+      const student = mission.meta?.student || mission.student || 'Student';
+      const program = mission.program || [];
+
+      let cpp = `/* ==========================================\n`;
+      cpp += ` * Studuino Robot Code\n`;
+      cpp += ` * Mission File: ${student}\n`;
+      cpp += ` * Target: 2-Motor Car (M1: Left, M2: Right)\n`;
+      cpp += ` * ========================================== */\n\n`;
+      cpp += `#include <Studuino.h>\n\n`;
+      cpp += `Studuino board;\n\n`;
+      cpp += `void setup() {\n`;
+      cpp += `  board.Init();\n`;
+      cpp += `  // Initialize DC Motors on M1 and M2\n`;
+      cpp += `  board.DCMotorMode(PORT_M1, MOTOR_NORMAL);\n`;
+      cpp += `  board.DCMotorMode(PORT_M2, MOTOR_NORMAL);\n`;
+      cpp += `}\n\n`;
+      cpp += `void loop() {\n`;
+      cpp += `  // Wait 1 second before autonomous routine starts\n`;
+      cpp += `  delay(1000);\n\n`;
+
+      program.forEach((step, idx) => {
+        const ms = Math.round((step.time || 1.0) * 1000);
+        const speed = Math.min(100, Math.max(0, step.speed || 80));
+
+        cpp += `  // Step ${idx + 1}: ${step.raw || step.cmd}\n`;
+
+        switch (step.cmd) {
+          case 'FORWARD':
+            cpp += `  board.DCMotorMode(PORT_M1, MOTOR_NORMAL);\n`;
+            cpp += `  board.DCMotorMode(PORT_M2, MOTOR_NORMAL);\n`;
+            cpp += `  board.DCMotorSpeed(PORT_M1, ${speed});\n`;
+            cpp += `  board.DCMotorSpeed(PORT_M2, ${speed});\n`;
+            cpp += `  delay(${ms});\n\n`;
+            break;
+
+          case 'BACKWARD':
+            cpp += `  board.DCMotorMode(PORT_M1, MOTOR_REVERSE);\n`;
+            cpp += `  board.DCMotorMode(PORT_M2, MOTOR_REVERSE);\n`;
+            cpp += `  board.DCMotorSpeed(PORT_M1, ${speed});\n`;
+            cpp += `  board.DCMotorSpeed(PORT_M2, ${speed});\n`;
+            cpp += `  delay(${ms});\n\n`;
+            break;
+
+          case 'TURN_LEFT':
+            // Left wheel reverse, Right wheel normal for tight pivot
+            cpp += `  board.DCMotorMode(PORT_M1, MOTOR_REVERSE);\n`;
+            cpp += `  board.DCMotorMode(PORT_M2, MOTOR_NORMAL);\n`;
+            cpp += `  board.DCMotorSpeed(PORT_M1, ${speed});\n`;
+            cpp += `  board.DCMotorSpeed(PORT_M2, ${speed});\n`;
+            cpp += `  delay(${ms});\n\n`;
+            break;
+
+          case 'TURN_RIGHT':
+            // Left wheel normal, Right wheel reverse
+            cpp += `  board.DCMotorMode(PORT_M1, MOTOR_NORMAL);\n`;
+            cpp += `  board.DCMotorMode(PORT_M2, MOTOR_REVERSE);\n`;
+            cpp += `  board.DCMotorSpeed(PORT_M1, ${speed});\n`;
+            cpp += `  board.DCMotorSpeed(PORT_M2, ${speed});\n`;
+            cpp += `  delay(${ms});\n\n`;
+            break;
+
+          case 'BEEP':
+            cpp += `  board.Buzzer(true);\n`;
+            cpp += `  delay(${ms});\n`;
+            cpp += `  board.Buzzer(false);\n\n`;
+            break;
+
+          case 'STOP':
+            cpp += `  board.DCMotorMode(PORT_M1, MOTOR_BRAKE);\n`;
+            cpp += `  board.DCMotorMode(PORT_M2, MOTOR_BRAKE);\n`;
+            cpp += `  delay(${ms});\n\n`;
+            break;
+
+          default:
+            cpp += `  // Unknown command skipped: ${step.cmd}\n\n`;
+        }
+      });
+
+      cpp += `  // Mission Complete: Full stop and halt execution\n`;
+      cpp += `  board.DCMotorMode(PORT_M1, MOTOR_BRAKE);\n`;
+      cpp += `  board.DCMotorMode(PORT_M2, MOTOR_BRAKE);\n`;
+      cpp += `  while (1) {\n`;
+      cpp += `    delay(500);\n`;
+      cpp += `  }\n`;
+      cpp += `}\n`;
+
+      return cpp;
+    }
+
+    // Actions
+    function copyCppCode() {
+      if (activeIndex === -1) return;
+      const code = submissions[activeIndex].cCode;
+      navigator.clipboard.writeText(code).then(() => {
+        const originalText = copyBtn.innerHTML;
+        copyBtn.innerHTML = `✅ <span>Copied!</span>`;
+        copyBtn.classList.replace('bg-slate-800', 'bg-emerald-600');
+        setTimeout(() => {
+          copyBtn.innerHTML = originalText;
+          copyBtn.classList.replace('bg-emerald-600', 'bg-slate-800');
+        }, 1500);
+      });
+    }
+
+    function downloadInoFile() {
+      if (activeIndex === -1) return;
+      const current = submissions[activeIndex];
+      const student = current.data.meta?.student || current.data.student || 'student';
+      const cleanName = student.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      
+      const blob = new Blob([current.cCode], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${cleanName}_mission.ino`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
