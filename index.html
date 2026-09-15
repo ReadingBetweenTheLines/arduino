@@ -2,11 +2,10 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>Lab Robot Studuino Mobile</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Izinkan scroll alami pada halaman tanpa dead-space */
     html, body {
       background-color: #020617;
       min-height: 100%;
@@ -71,7 +70,7 @@
     </div>
   </header>
 
-  <!-- 2. Arena Simulasi (16:9 Ringkas & Presisi) -->
+  <!-- 2. Arena Simulasi (16:9) -->
   <div class="relative w-full aspect-[16/9] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner">
     <canvas id="simCanvas" class="w-full h-full block"></canvas>
     
@@ -114,7 +113,7 @@
     </div>
   </div>
 
-  <!-- 4. Area Kerja Kode (Mengalir Alami Tanpa Dead-Space) -->
+  <!-- 4. Area Kerja Kode -->
   <div id="workspaceContainer" class="bg-slate-900/80 border border-slate-800 rounded-xl p-2 shadow-inner transition-all">
     <div class="flex justify-between items-center mb-2">
       <input id="studentName" type="text" placeholder="Nama / Kelompok Siswa" class="w-2/3 bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-100 focus:outline-none focus:border-sky-500">
@@ -123,11 +122,11 @@
 
     <!-- Container Daftar Blok -->
     <div id="mainDropZone" class="flex flex-col gap-1.5 min-h-[120px]">
-      <!-- Blok yang disusun siswa muncul di sini -->
+      <!-- Blok dinamis dirender di sini -->
     </div>
   </div>
 
-  <!-- 5. Tombol Aksi (Tepat di Bawah Blok Kode, Selalu Terlihat & Mudah Dijangkau) -->
+  <!-- 5. Tombol Aksi Langsung di Bawah Kode -->
   <div class="grid grid-cols-2 gap-2 pt-1 pb-4">
     <button id="runBtn" onclick="runSimulation()" class="w-full py-3 bg-sky-500 active:bg-sky-400 text-slate-950 font-bold rounded-xl text-xs transition shadow-lg shadow-sky-950/50 flex items-center justify-center gap-1.5">
       <span>▶</span> Jalankan Simulasi
@@ -174,6 +173,9 @@
     const MAX_LINEAR_SPEED = 75;
     const TURN_DAMPING = 1.0;
 
+    let canvasLogicalWidth = 320;
+    let canvasLogicalHeight = 180;
+
     let robot = {
       x: 0,
       y: 0,
@@ -188,6 +190,7 @@
     let animFrame = null;
     let lastPhysicsTime = 0;
     let touchSensorActive = false;
+    let currentExecutionId = 0;
 
     // Pohon Program Awal
     let programTree = [
@@ -207,7 +210,7 @@
       { id: 8, type: 'M2_BRAKE', text: 'M2 BERHENTI REM' }
     ];
 
-    let nextBlockId = 1200;
+    let nextBlockId = 1300;
 
     function getBlockSpec(type) {
       switch(type) {
@@ -244,11 +247,14 @@
       }
     }
 
-    // Touch & Drag Engine
+    // ============================================================
+    // HARDENED TOUCH & POINTER ENGINE
+    // ============================================================
     let activeDrag = null;
     let lastDropTarget = null;
     let lastDropPos = null;
     let hasMovedThreshold = false;
+    let activePointerId = null;
 
     function initPaletteTouch() {
       document.querySelectorAll('.palette-item').forEach(item => {
@@ -268,9 +274,16 @@
 
     function startUniversalDrag(e, payload) {
       activeDrag = payload;
+      activePointerId = e.pointerId;
       hasMovedThreshold = false;
       lastDropTarget = null;
       lastDropPos = null;
+
+      try {
+        e.target.setPointerCapture(e.pointerId);
+      } catch (err) {
+        // Fallback for browsers that restrict capture
+      }
 
       touchGhost.textContent = payload.ghostText;
       touchGhost.style.left = `${e.clientX}px`;
@@ -300,7 +313,6 @@
 
       clearAllIndicators();
 
-      // Scroll halaman otomatis jika kursor mendekati tepi atas/bawah layar
       if (e.clientY < 60) {
         window.scrollBy({ top: -10, behavior: 'auto' });
       } else if (e.clientY > window.innerHeight - 60) {
@@ -324,11 +336,18 @@
       const blockEl = target.closest('[data-block-id]');
 
       if (insideSlot) {
+        const containerId = parseInt(insideSlot.dataset.insideSlot);
+        // Cegah drop jika kontainer adalah turunan dari blok yang sedang diseret
+        if (!activeDrag.isNew && isDescendantOf(findNodeById(programTree, activeDrag.id), containerId)) {
+          lastDropTarget = null;
+          return;
+        }
         insideSlot.classList.add('drop-indicator-inside');
         lastDropTarget = insideSlot;
         lastDropPos = 'inside';
       } else if (blockEl) {
-        if (!activeDrag.isNew && parseInt(blockEl.dataset.blockId) === activeDrag.id) {
+        const targetId = parseInt(blockEl.dataset.blockId);
+        if (!activeDrag.isNew && (targetId === activeDrag.id || isDescendantOf(findNodeById(programTree, activeDrag.id), targetId))) {
           lastDropTarget = null;
           return;
         }
@@ -361,20 +380,23 @@
       touchGhost.style.display = 'none';
       workspaceContainer.classList.remove('outline', 'outline-2', 'outline-rose-500/60');
 
+      if (activePointerId !== null && e.target && e.target.releasePointerCapture) {
+        try {
+          e.target.releasePointerCapture(activePointerId);
+        } catch (err) {}
+      }
+
       document.querySelectorAll('.is-moving').forEach(el => el.classList.remove('is-moving'));
 
       if (activeDrag) {
-        // Tap biasa pada palet: tambahkan tepat 1 blok ke paling bawah
         if (activeDrag.isNew && !hasMovedThreshold) {
           programTree.push(createNode(activeDrag.type));
           renderWorkspace();
         }
-        // Seret ke luar: hapus
         else if (!activeDrag.isNew && lastDropPos === 'delete') {
           extractNodeById(programTree, activeDrag.id);
           renderWorkspace();
         }
-        // Drop pada target slot
         else if (lastDropTarget) {
           let nodeToInsert = null;
           if (activeDrag.isNew) {
@@ -387,7 +409,7 @@
             if (lastDropPos === 'inside') {
               const containerId = parseInt(lastDropTarget.dataset.insideSlot);
               const container = findNodeById(programTree, containerId);
-              if (container && container.children && container.id !== nodeToInsert.id) {
+              if (container && container.children && container.id !== nodeToInsert.id && !isDescendantOf(nodeToInsert, container.id)) {
                 container.children.push(nodeToInsert);
               }
             } else if (lastDropPos === 'wrap') {
@@ -395,14 +417,13 @@
               wrapExistingCodeInside(programTree, targetId, nodeToInsert);
             } else {
               const targetId = parseInt(lastDropTarget.dataset.blockId);
-              if (targetId && targetId !== nodeToInsert.id) {
+              if (targetId && targetId !== nodeToInsert.id && !isDescendantOf(nodeToInsert, targetId)) {
                 insertNearNode(programTree, targetId, nodeToInsert, lastDropPos);
               }
             }
           }
           renderWorkspace();
         }
-        // Drag blok baru ke area kosong workspace
         else if (activeDrag.isNew && hasMovedThreshold) {
           const target = document.elementFromPoint(e.clientX, e.clientY);
           if (target && target.closest('#mainDropZone')) {
@@ -417,12 +438,23 @@
       lastDropTarget = null;
       lastDropPos = null;
       hasMovedThreshold = false;
+      activePointerId = null;
     }
 
     function clearAllIndicators() {
       document.querySelectorAll('.drop-indicator-top, .drop-indicator-bottom, .drop-indicator-inside, .drop-indicator-wrap').forEach(el => {
         el.classList.remove('drop-indicator-top', 'drop-indicator-bottom', 'drop-indicator-inside', 'drop-indicator-wrap');
       });
+    }
+
+    // Cek agar parent tidak bisa di-drop ke anaknya sendiri
+    function isDescendantOf(parent, targetId) {
+      if (!parent || !parent.children) return false;
+      for (let child of parent.children) {
+        if (child.id === targetId) return true;
+        if (isDescendantOf(child, targetId)) return true;
+      }
+      return false;
     }
 
     function wrapExistingCodeInside(list, targetId, containerNode) {
@@ -567,14 +599,16 @@
       buildDOM(programTree, mainDropZone);
     }
 
-    // Canvas Fisika
+    // Arena Fisika & Scaling
     function resizeCanvas() {
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
+      canvasLogicalWidth = rect.width;
+      canvasLogicalHeight = rect.height;
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
       ctx.scale(dpr, dpr);
-      obstacle.x = (rect.width / 2) - 14;
+      obstacle.x = (canvasLogicalWidth / 2) - 14;
       obstacle.y = 25;
       drawScene();
     }
@@ -590,15 +624,20 @@
 
     function stopAndReset() {
       isRunning = false;
+      currentExecutionId++; // Batalkan semua async task yang sedang berjalan
       if (animFrame) cancelAnimationFrame(animFrame);
-      const rect = canvas.getBoundingClientRect();
-      robot.x = rect.width / 2;
-      robot.y = rect.height - 35;
+      
+      robot.x = canvasLogicalWidth / 2;
+      robot.y = canvasLogicalHeight - 35;
       robot.angle = -Math.PI / 2;
       robot.m1 = { power: 0, mode: 'STOP', phase: 0, currentSpeed: 0 };
       robot.m2 = { power: 0, mode: 'STOP', phase: 0, currentSpeed: 0 };
       pathHistory = [{ x: robot.x, y: robot.y }];
       touchSensorActive = false;
+      
+      runBtn.disabled = false;
+      runBtn.classList.remove('opacity-50');
+
       updateHud();
       drawScene();
       statusBadge.textContent = 'Siap';
@@ -611,8 +650,7 @@
     }
 
     function checkCollision() {
-      const rect = canvas.getBoundingClientRect();
-      if (robot.x <= 14 || robot.x >= rect.width - 14 || robot.y <= 14 || robot.y >= rect.height - 14) return true;
+      if (robot.x <= 14 || robot.x >= canvasLogicalWidth - 14 || robot.y <= 14 || robot.y >= canvasLogicalHeight - 14) return true;
       if (robot.x + 12 >= obstacle.x && robot.x - 12 <= obstacle.x + obstacle.w &&
           robot.y + 12 >= obstacle.y && robot.y - 12 <= obstacle.y + obstacle.h) return true;
       return false;
@@ -631,16 +669,15 @@
     }
 
     function drawScene() {
-      const rect = canvas.getBoundingClientRect();
-      ctx.clearRect(0, 0, rect.width, rect.height);
+      ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
 
       ctx.strokeStyle = '#1e293b';
       ctx.lineWidth = 1;
-      for (let x = 0; x < rect.width; x += 20) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, rect.height); ctx.stroke();
+      for (let x = 0; x < canvasLogicalWidth; x += 20) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvasLogicalHeight); ctx.stroke();
       }
-      for (let y = 0; y < rect.height; y += 20) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(rect.width, y); ctx.stroke();
+      for (let y = 0; y < canvasLogicalHeight; y += 20) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvasLogicalWidth, y); ctx.stroke();
       }
 
       ctx.fillStyle = '#dc2626';
@@ -709,8 +746,6 @@
     }
 
     function stepPhysics(dt) {
-      const rect = canvas.getBoundingClientRect();
-
       let target1 = 0, target2 = 0;
       if (robot.m1.mode === 'CLOCKWISE' && robot.m1.power > 0) target1 = robot.m1.power;
       else if (robot.m1.mode === 'COUNTERCLOCKWISE' && robot.m1.power > 0) target1 = -robot.m1.power;
@@ -735,8 +770,8 @@
       robot.m1.phase += (vLeft * dt * 0.4);
       robot.m2.phase += (vRight * dt * 0.4);
 
-      robot.x = Math.max(14, Math.min(rect.width - 14, robot.x));
-      robot.y = Math.max(14, Math.min(rect.height - 14, robot.y));
+      robot.x = Math.max(14, Math.min(canvasLogicalWidth - 14, robot.x));
+      robot.y = Math.max(14, Math.min(canvasLogicalHeight - 14, robot.y));
 
       touchSensorActive = checkCollision();
 
@@ -749,9 +784,9 @@
       drawScene();
     }
 
-    async function executeAst(nodes) {
+    async function executeAst(nodes, execId) {
       for (const node of nodes) {
-        if (!isRunning) return;
+        if (!isRunning || execId !== currentExecutionId) return;
         statusBadge.textContent = node.text || (node.type === 'WAIT' ? `TUNGGU ${node.value}s` : node.type);
 
         switch(node.type) {
@@ -768,22 +803,22 @@
           case 'WAIT':
             const durationMs = (node.value || 1.0) * 1000;
             const start = performance.now();
-            while (isRunning && (performance.now() - start < durationMs)) {
+            while (isRunning && execId === currentExecutionId && (performance.now() - start < durationMs)) {
               await new Promise(r => setTimeout(r, 16));
             }
             break;
 
           case 'REPEAT_4':
             for (let c = 0; c < 4; c++) {
-              if (!isRunning) break;
-              await executeAst(node.children || []);
+              if (!isRunning || execId !== currentExecutionId) break;
+              await executeAst(node.children || [], execId);
             }
             break;
 
           case 'FOREVER':
             let count = 0;
-            while (isRunning && count < 200) {
-              await executeAst(node.children || []);
+            while (isRunning && execId === currentExecutionId && count < 200) {
+              await executeAst(node.children || [], execId);
               count++;
               await new Promise(r => setTimeout(r, 16));
             }
@@ -791,7 +826,7 @@
 
           case 'IF_TOUCH':
             if (touchSensorActive) {
-              await executeAst(node.children || []);
+              await executeAst(node.children || [], execId);
             }
             break;
         }
@@ -814,22 +849,32 @@
         return;
       }
 
+      // Cegah multi-instansiasi loop
+      stopAndReset();
+      
       isRunning = true;
+      const thisExecId = ++currentExecutionId;
+      runBtn.disabled = true;
+      runBtn.classList.add('opacity-50');
+
       lastPhysicsTime = performance.now();
-      if (animFrame) cancelAnimationFrame(animFrame);
       animFrame = requestAnimationFrame(mainPhysicsLoop);
 
-      await executeAst(programTree);
+      await executeAst(programTree, thisExecId);
 
-      const m1Active = robot.m1.mode !== 'STOP' && robot.m1.power > 0;
-      const m2Active = robot.m2.mode !== 'STOP' && robot.m2.power > 0;
+      if (thisExecId === currentExecutionId) {
+        runBtn.disabled = false;
+        runBtn.classList.remove('opacity-50');
+        const m1Active = robot.m1.mode !== 'STOP' && robot.m1.power > 0;
+        const m2Active = robot.m2.mode !== 'STOP' && robot.m2.power > 0;
 
-      if (m1Active || m2Active) {
-        statusBadge.textContent = 'Berjalan Terus';
-        statusBadge.className = 'bg-sky-900 border border-sky-600 px-2 py-0.5 rounded-full text-[9px] font-mono text-sky-200 animate-pulse';
-      } else {
-        statusBadge.textContent = 'Selesai';
-        statusBadge.className = 'bg-slate-900 border border-slate-700 px-2 py-0.5 rounded-full text-[9px] font-mono text-slate-300';
+        if (m1Active || m2Active) {
+          statusBadge.textContent = 'Berjalan Terus';
+          statusBadge.className = 'bg-sky-900 border border-sky-600 px-2 py-0.5 rounded-full text-[9px] font-mono text-sky-200 animate-pulse';
+        } else {
+          statusBadge.textContent = 'Selesai';
+          statusBadge.className = 'bg-slate-900 border border-slate-700 px-2 py-0.5 rounded-full text-[9px] font-mono text-slate-300';
+        }
       }
     }
 
@@ -868,8 +913,8 @@
 
       const payload = {
         meta: {
-          app: "StuduinoScratchLab_MobileBottomButtons",
-          version: "29.0",
+          app: "StuduinoScratchLab_MobileHardened",
+          version: "30.0",
           student: studentName,
           exportedAt: new Date().toISOString()
         },
