@@ -48,9 +48,17 @@
       transform: scale(0.96);
     }
 
-    /* Kunci: Cegah browser membatalkan drag gesture saat menyentuh blok */
-    .palette-item, [data-block-id] {
+    /* Placed code blocks handle drag anywhere on their body */
+    [data-block-id] {
       touch-action: none;
+    }
+    /* Palette allows horizontal scroll gestures */
+    #paletteScrollContainer {
+      touch-action: pan-x;
+      -webkit-overflow-scrolling: touch;
+    }
+    .palette-item {
+      touch-action: pan-x;
     }
   </style>
 </head>
@@ -97,10 +105,10 @@
   <div id="paletteBar" class="bg-slate-900/60 border border-slate-800 rounded-xl p-2 transition-colors">
     <div class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex justify-between">
       <span>Palet Blok (Tarik / Ketuk)</span>
-      <span class="text-slate-500 font-normal">Geser ➔</span>
+      <span class="text-sky-400 font-normal">Geser ke samping ➔</span>
     </div>
     
-    <div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5" style="touch-action: pan-x;">
+    <div id="paletteScrollContainer" class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
       <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_POWER_100">M1 DAYA 100</div>
       <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_CW">M1 SEARAH ↻</div>
       <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_CCW">M1 LAWAN ↺</div>
@@ -127,7 +135,7 @@
 
     <!-- Container Daftar Blok -->
     <div id="mainDropZone" class="flex flex-col gap-1.5 min-h-[120px]">
-      <!-- Blok yang disusun siswa muncul di sini -->
+      <!-- Blok dinamis dirender di sini -->
     </div>
   </div>
 
@@ -149,10 +157,10 @@
         <button onclick="closeTutorial()" class="text-slate-400 font-bold text-sm px-2 py-0.5 rounded bg-slate-800">✕</button>
       </div>
       <p class="text-[10px] text-slate-300 leading-relaxed">
-        • <b>Tambah Blok:</b> Ketuk atau tarik blok dari palet atas.<br>
-        • <b>Pindahkan Posisi:</b> Sentuh dan tahan di area mana saja pada blok untuk memindahkannya.<br>
-        • <b>Hapus Blok:</b> Seret blok ke luar kotak kode atau ketuk tombol silang <b>✕</b>.<br>
-        • <b>Membungkus Kode:</b> Seret blok kontainer (ULANGI / SELAMANYA) ke blok lain untuk membungkus kode masuk ke dalamnya!
+        • <b>Geser Palet:</b> Geser deretan tombol palet ke kiri/kanan untuk melihat perintah lainnya.<br>
+        • <b>Tambah Blok:</b> Ketuk tombol palet untuk menambahkan ke akhir, atau tarik ke bawah menuju posisi yang diinginkan.<br>
+        • <b>Pindahkan Blok:</b> Tahan dan seret blok pada area kode untuk memindahkannya.<br>
+        • <b>Hapus Blok:</b> Seret blok keluar dari kotak kode atau ketuk tanda <b>✕</b>.
       </p>
       <button onclick="closeTutorial()" class="w-full py-2 bg-sky-600 active:bg-sky-500 text-slate-950 font-bold rounded-xl text-xs transition">
         Saya Mengerti
@@ -214,7 +222,7 @@
       { id: 8, type: 'M2_BRAKE', text: 'M2 BERHENTI REM' }
     ];
 
-    let nextBlockId = 1500;
+    let nextBlockId = 1600;
 
     function getBlockSpec(type) {
       switch(type) {
@@ -252,17 +260,17 @@
     }
 
     // ============================================================
-    // DIRECT BLOCK-TOUCH & POINTER ENGINE
+    // UNIVERSAL TOUCH ENGINE (SMART SWIPE VS DRAG DIFFERENTIATION)
     // ============================================================
     let activeDrag = null;
     let lastDropTarget = null;
     let lastDropPos = null;
-    let hasMovedThreshold = false;
+    let dragModeLocked = false;
 
     function initPaletteTouch() {
       document.querySelectorAll('.palette-item').forEach(item => {
+        // Jangan preventDefault() di pointerdown agar browser bebas scroll horizontal
         item.addEventListener('pointerdown', (e) => {
-          e.preventDefault();
           const type = item.dataset.type;
           startUniversalDrag(e, { 
             isNew: true, 
@@ -277,7 +285,7 @@
 
     function startUniversalDrag(e, payload) {
       activeDrag = payload;
-      hasMovedThreshold = false;
+      dragModeLocked = false;
       lastDropTarget = null;
       lastDropPos = null;
 
@@ -285,24 +293,46 @@
       touchGhost.style.left = `${e.clientX}px`;
       touchGhost.style.top = `${e.clientY - 25}px`;
 
-      if (!payload.isNew) {
-        const originalEl = document.querySelector(`[data-block-id="${payload.id}"]`);
-        if (originalEl) originalEl.classList.add('is-moving');
-      }
-
       window.addEventListener('pointermove', onPointerMove, { passive: false });
       window.addEventListener('pointerup', onPointerUp);
-      window.addEventListener('pointercancel', onPointerUp);
+      window.addEventListener('pointercancel', onPointerCancel);
     }
 
     function onPointerMove(e) {
       if (!activeDrag) return;
 
-      const dist = Math.hypot(e.clientX - activeDrag.startX, e.clientY - activeDrag.startY);
-      if (dist > 4) {
-        hasMovedThreshold = true;
-        touchGhost.style.display = 'block';
+      const dx = e.clientX - activeDrag.startX;
+      const dy = e.clientY - activeDrag.startY;
+
+      // Jika dari palet dan belum terkunci ke mode drag
+      if (activeDrag.isNew && !dragModeLocked) {
+        // Jika gerakan jari dominan horizontal, serahkan ke scroll swipe palet
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 7) {
+          onPointerCancel();
+          return;
+        }
+        // Jika ditarik ke bawah (ke arah kode), kunci mode drag
+        if (Math.abs(dy) > 7 && Math.abs(dy) >= Math.abs(dx)) {
+          dragModeLocked = true;
+          touchGhost.style.display = 'block';
+          if (e.cancelable) e.preventDefault();
+        } else {
+          return;
+        }
+      } else {
+        // Untuk blok kode yang sudah ada, gerakan > 3px langsung aktifkan drag
+        if (Math.hypot(dx, dy) > 3) {
+          dragModeLocked = true;
+          touchGhost.style.display = 'block';
+          if (!activeDrag.isNew) {
+            const originalEl = document.querySelector(`[data-block-id="${activeDrag.id}"]`);
+            if (originalEl) originalEl.classList.add('is-moving');
+          }
+          if (e.cancelable) e.preventDefault();
+        }
       }
+
+      if (!dragModeLocked) return;
 
       touchGhost.style.left = `${e.clientX}px`;
       touchGhost.style.top = `${e.clientY - 25}px`;
@@ -317,7 +347,7 @@
 
       touchGhost.style.display = 'none';
       const target = document.elementFromPoint(e.clientX, e.clientY);
-      if (hasMovedThreshold) touchGhost.style.display = 'block';
+      touchGhost.style.display = 'block';
 
       if (!target) return;
 
@@ -371,18 +401,31 @@
       }
     }
 
+    function onPointerCancel() {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerCancel);
+      touchGhost.style.display = 'none';
+      workspaceContainer.classList.remove('outline', 'outline-2', 'outline-rose-500/60');
+      document.querySelectorAll('.is-moving').forEach(el => el.classList.remove('is-moving'));
+      clearAllIndicators();
+      activeDrag = null;
+      lastDropTarget = null;
+      lastDropPos = null;
+      dragModeLocked = false;
+    }
+
     function onPointerUp(e) {
       window.removeEventListener('pointermove', onPointerMove);
       window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerCancel);
       touchGhost.style.display = 'none';
       workspaceContainer.classList.remove('outline', 'outline-2', 'outline-rose-500/60');
-
       document.querySelectorAll('.is-moving').forEach(el => el.classList.remove('is-moving'));
 
       if (activeDrag) {
-        // Tap biasa pada palet: tambahkan 1 blok ke akhir
-        if (activeDrag.isNew && !hasMovedThreshold) {
+        // Tap biasa pada palet (tanpa drag): tambah 1 blok ke paling akhir
+        if (activeDrag.isNew && !dragModeLocked) {
           programTree.push(createNode(activeDrag.type));
           renderWorkspace();
         }
@@ -419,8 +462,8 @@
           }
           renderWorkspace();
         }
-        // Drag blok baru ke area kosong
-        else if (activeDrag.isNew && hasMovedThreshold) {
+        // Drag blok baru ke area kosong workspace
+        else if (activeDrag.isNew && dragModeLocked) {
           const target = document.elementFromPoint(e.clientX, e.clientY);
           if (target && target.closest('#mainDropZone')) {
             programTree.push(createNode(activeDrag.type));
@@ -433,7 +476,7 @@
       activeDrag = null;
       lastDropTarget = null;
       lastDropPos = null;
-      hasMovedThreshold = false;
+      dragModeLocked = false;
     }
 
     function clearAllIndicators() {
@@ -516,7 +559,7 @@
     }
 
     // ============================================================
-    // RENDERING WORKSPACE (DRAGGABLE ANYWHERE ON CARD BODY)
+    // RENDERING WORKSPACE
     // ============================================================
     function renderWorkspace() {
       mainDropZone.innerHTML = '';
@@ -536,7 +579,7 @@
           blockEl.dataset.blockId = node.id;
 
           if (spec.isWait) {
-            blockEl.className = `rounded-lg border ${spec.color} px-2 py-1 shadow-sm text-[10px] font-mono flex items-center justify-between transition-all cursor-grab active:cursor-grabbing`;
+            blockEl.className = `rounded-lg border ${spec.color} px-2 py-1 shadow-sm text-[10px] font-mono flex items-center justify-between transition-all cursor-grab active:cursor-grabbing select-none`;
             blockEl.innerHTML = `
               <div class="flex items-center gap-1.5 flex-1 pointer-events-none">
                 <span class="text-amber-400 font-bold px-1 select-none text-xs">≡</span>
@@ -547,7 +590,7 @@
               <button onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs pointer-events-auto">✕</button>
             `;
           } else if (spec.isContainer) {
-            blockEl.className = `rounded-xl border ${spec.color} p-1 shadow-sm text-xs flex flex-col gap-1 transition-all cursor-grab active:cursor-grabbing`;
+            blockEl.className = `rounded-xl border ${spec.color} p-1 shadow-sm text-xs flex flex-col gap-1 transition-all cursor-grab active:cursor-grabbing select-none`;
             blockEl.innerHTML = `
               <div class="flex items-center justify-between font-mono font-bold text-[10px] px-1 pointer-events-none">
                 <div class="flex items-center gap-1.5">
@@ -563,7 +606,7 @@
             const innerSlot = blockEl.querySelector('[data-inside-slot]');
             buildDOM(node.children || [], innerSlot);
           } else {
-            blockEl.className = `rounded-lg border ${spec.color} px-2 py-1 shadow-sm text-[10px] font-mono flex items-center justify-between transition-all cursor-grab active:cursor-grabbing`;
+            blockEl.className = `rounded-lg border ${spec.color} px-2 py-1 shadow-sm text-[10px] font-mono flex items-center justify-between transition-all cursor-grab active:cursor-grabbing select-none`;
             blockEl.innerHTML = `
               <div class="flex items-center gap-1.5 pointer-events-none">
                 <span class="text-slate-400 font-bold px-1 select-none text-xs">≡</span>
@@ -573,13 +616,11 @@
             `;
           }
 
-          // Pasang listener di seluruh badan blok (kecuali tombol dan input)
+          // Listener drag pada badan blok
           blockEl.addEventListener('pointerdown', (e) => {
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
             if (e.target.closest('[data-inside-slot]') && e.target !== blockEl) return;
 
-            e.preventDefault();
-            e.stopPropagation();
             startUniversalDrag(e, { 
               isNew: false, 
               id: node.id, 
@@ -911,7 +952,7 @@
       const payload = {
         meta: {
           app: "StuduinoScratchLab_MobileFinal",
-          version: "32.0",
+          version: "33.0",
           student: studentName,
           exportedAt: new Date().toISOString()
         },
