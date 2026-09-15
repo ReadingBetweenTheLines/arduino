@@ -2,33 +2,29 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Lab Robot Studuino Mobile - Pinned Bottom Dock</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Lab Robot Studuino Mobile</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Izinkan scroll alami pada halaman agar tombol tidak terpotong di HP */
-    html {
-      scroll-behavior: smooth;
-    }
-    body {
+    /* Izinkan scroll alami pada halaman tanpa dead-space */
+    html, body {
+      background-color: #020617;
       min-height: 100%;
-      overflow-x: hidden;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
       user-select: none;
+      -webkit-touch-callout: none;
     }
     
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-    /* Scratch Drop Guidance Lines */
+    /* Drop Indicators */
     .drop-indicator-top {
       border-top: 3px solid #38bdf8 !important;
-      box-shadow: 0 -3px 8px rgba(56, 189, 248, 0.5);
+      box-shadow: 0 -3px 6px rgba(56, 189, 248, 0.5);
     }
     .drop-indicator-bottom {
       border-bottom: 3px solid #38bdf8 !important;
-      box-shadow: 0 3px 8px rgba(56, 189, 248, 0.5);
+      box-shadow: 0 3px 6px rgba(56, 189, 248, 0.5);
     }
     .drop-indicator-inside {
       background-color: rgba(56, 189, 248, 0.15) !important;
@@ -37,7 +33,7 @@
     .drop-indicator-wrap {
       outline: 2px dashed #f59e0b !important;
       outline-offset: 2px;
-      background-color: rgba(245, 158, 11, 0.1) !important;
+      background-color: rgba(245, 158, 11, 0.12) !important;
     }
 
     #touchGhost {
@@ -54,13 +50,13 @@
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 flex flex-col font-sans min-h-screen p-2.5 max-w-md mx-auto relative pb-28">
+<body class="bg-slate-950 text-slate-100 font-sans p-3 max-w-md mx-auto flex flex-col gap-2.5">
 
   <!-- Floating Touch Ghost -->
   <div id="touchGhost" class="px-2.5 py-1.5 rounded-lg border border-sky-400 bg-sky-950/95 text-sky-200 text-[10px] font-mono shadow-2xl"></div>
 
-  <!-- Header -->
-  <header class="flex items-center justify-between py-1.5 border-b border-slate-800 mb-2 flex-shrink-0">
+  <!-- 1. Header -->
+  <header class="flex items-center justify-between pb-1 border-b border-slate-800">
     <div class="flex items-center gap-1.5">
       <span class="text-sm">🧩</span>
       <h1 class="text-xs font-bold text-sky-400">Lab Studuino Mobile</h1>
@@ -75,8 +71,8 @@
     </div>
   </header>
 
-  <!-- Arena Simulasi (16:9 Tetap Ringkas) -->
-  <div class="relative w-full aspect-[16/9] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner flex-shrink-0 mb-2">
+  <!-- 2. Arena Simulasi (16:9 Ringkas & Presisi) -->
+  <div class="relative w-full aspect-[16/9] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner">
     <canvas id="simCanvas" class="w-full h-full block"></canvas>
     
     <!-- HUD Telemetri -->
@@ -93,14 +89,14 @@
     </div>
   </div>
 
-  <!-- PALET BLOK HORIZONTAL -->
-  <div id="paletteBar" class="mb-2 flex-shrink-0 bg-slate-900/60 border border-slate-800 rounded-xl p-1.5 transition-colors">
-    <div class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1 flex justify-between">
+  <!-- 3. Palet Blok Horizontal Swipeable -->
+  <div id="paletteBar" class="bg-slate-900/60 border border-slate-800 rounded-xl p-2 transition-colors">
+    <div class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex justify-between">
       <span>Palet Blok (Tarik / Ketuk)</span>
       <span class="text-slate-500 font-normal">Geser ➔</span>
     </div>
     
-    <div class="flex gap-1 overflow-x-auto no-scrollbar pb-0.5" style="touch-action: pan-x;">
+    <div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5" style="touch-action: pan-x;">
       <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab" data-type="M1_POWER_100">M1 DAYA 100</div>
       <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab" data-type="M1_CW">M1 SEARAH ↻</div>
       <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab" data-type="M1_CCW">M1 LAWAN ↺</div>
@@ -118,34 +114,30 @@
     </div>
   </div>
 
-  <!-- AREA KERJA WORKSPACE (Scroll Bebas & Alami Tanpa Batas Bawah) -->
-  <div id="workspaceContainer" class="bg-slate-900/80 border border-slate-800 rounded-xl p-2 shadow-inner mb-4 transition-all">
+  <!-- 4. Area Kerja Kode (Mengalir Alami Tanpa Dead-Space) -->
+  <div id="workspaceContainer" class="bg-slate-900/80 border border-slate-800 rounded-xl p-2 shadow-inner transition-all">
     <div class="flex justify-between items-center mb-2">
-      <input id="studentName" type="text" placeholder="Nama / Kelompok Siswa" class="w-2/3 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-100 focus:outline-none focus:border-sky-500">
-      <div class="flex items-center gap-1">
-        <button onclick="clearWorkspace()" class="px-2 py-1 bg-slate-800 active:bg-slate-700 text-slate-300 text-[10px] rounded">Kosongkan</button>
-      </div>
+      <input id="studentName" type="text" placeholder="Nama / Kelompok Siswa" class="w-2/3 bg-slate-950 border border-slate-800 rounded px-2.5 py-1 text-xs text-slate-100 focus:outline-none focus:border-sky-500">
+      <button onclick="clearWorkspace()" class="px-2.5 py-1 bg-slate-800 active:bg-slate-700 text-slate-300 text-[10px] rounded">Kosongkan</button>
     </div>
 
-    <!-- Drop Zone Utama (Bebas Bertambah Panjang) -->
-    <div id="mainDropZone" class="flex flex-col gap-1.5 min-h-[140px]">
-      <!-- Blok dinamis dirender di sini -->
+    <!-- Container Daftar Blok -->
+    <div id="mainDropZone" class="flex flex-col gap-1.5 min-h-[120px]">
+      <!-- Blok yang disusun siswa muncul di sini -->
     </div>
   </div>
 
-  <!-- DOCK TOMBOL BAWAH (STICKY, SELALU TERLIHAT DI HP APAPUN) -->
-  <div class="fixed bottom-0 left-0 right-0 z-50 bg-slate-950/95 backdrop-blur-md border-t border-slate-800 p-2.5 shadow-2xl">
-    <div class="max-w-md mx-auto grid grid-cols-2 gap-2">
-      <button id="runBtn" onclick="runSimulation()" class="w-full py-3 bg-sky-500 active:bg-sky-400 text-slate-950 font-bold rounded-xl text-xs transition shadow-lg shadow-sky-950 flex items-center justify-center gap-1.5">
-        <span>▶</span> Jalankan Simulasi
-      </button>
-      <button onclick="exportJSON()" class="w-full py-3 bg-slate-800 active:bg-slate-700 border border-slate-700 text-slate-100 font-semibold rounded-xl text-xs transition shadow-lg flex items-center justify-center gap-1.5">
-        <span>📥</span> Unduh Misi (.json)
-      </button>
-    </div>
+  <!-- 5. Tombol Aksi (Tepat di Bawah Blok Kode, Selalu Terlihat & Mudah Dijangkau) -->
+  <div class="grid grid-cols-2 gap-2 pt-1 pb-4">
+    <button id="runBtn" onclick="runSimulation()" class="w-full py-3 bg-sky-500 active:bg-sky-400 text-slate-950 font-bold rounded-xl text-xs transition shadow-lg shadow-sky-950/50 flex items-center justify-center gap-1.5">
+      <span>▶</span> Jalankan Simulasi
+    </button>
+    <button onclick="exportJSON()" class="w-full py-3 bg-slate-800 active:bg-slate-700 border border-slate-700 text-slate-100 font-semibold rounded-xl text-xs transition shadow flex items-center justify-center gap-1.5">
+      <span>📥</span> Unduh Misi (.json)
+    </button>
   </div>
 
-  <!-- Modal Tutorial -->
+  <!-- Modal Tutorial Motor -->
   <div id="tutorialModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm p-3 hidden flex items-center justify-center overflow-y-auto">
     <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-4 shadow-2xl flex flex-col gap-2.5 my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -215,7 +207,7 @@
       { id: 8, type: 'M2_BRAKE', text: 'M2 BERHENTI REM' }
     ];
 
-    let nextBlockId = 1100;
+    let nextBlockId = 1200;
 
     function getBlockSpec(type) {
       switch(type) {
@@ -308,10 +300,10 @@
 
       clearAllIndicators();
 
-      // Auto scroll halaman secara vertikal jika drag mendekati ujung layar
+      // Scroll halaman otomatis jika kursor mendekati tepi atas/bawah layar
       if (e.clientY < 60) {
         window.scrollBy({ top: -10, behavior: 'auto' });
-      } else if (e.clientY > window.innerHeight - 80) {
+      } else if (e.clientY > window.innerHeight - 60) {
         window.scrollBy({ top: 10, behavior: 'auto' });
       }
 
@@ -575,7 +567,7 @@
       buildDOM(programTree, mainDropZone);
     }
 
-    // Arena Fisika
+    // Canvas Fisika
     function resizeCanvas() {
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
@@ -876,8 +868,8 @@
 
       const payload = {
         meta: {
-          app: "StuduinoScratchLab_MobileBottomDock",
-          version: "28.0",
+          app: "StuduinoScratchLab_MobileBottomButtons",
+          version: "29.0",
           student: studentName,
           exportedAt: new Date().toISOString()
         },
