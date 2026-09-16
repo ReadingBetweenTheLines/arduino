@@ -1,60 +1,73 @@
 /**
- * DATABASE LEVEL & MISI TANTANGAN STUDUINO
- * Disimpan di window.GAME_LEVELS agar dapat diakses kapan saja.
+ * DATABASE LEVEL & TANTANGAN EKSPEDISI ROBOT STUDUINO (10 LEVELS)
+ * Kalibrasi terverifikasi: Wheel Base 36px, Kecepatan 75px/detik, Rasio belok 1.0.
  */
+
 window.GAME_LEVELS = [
   {
     id: 1,
     title: "Level 1: Garis Lurus",
-    subtitle: "Luncurkan robot menuju sasaran",
-    brief: "Aktifkan M1 dan M2 dengan arah SEARAH (CW). Atur detik TUNGGU agar berhenti pas di lingkaran hijau.",
-    starsRule: { threeStarsSec: 2.2, twoStarsSec: 3.8 },
-    start: { xRel: 0.5, yRel: 0.82, angle: -Math.PI / 2 },
-    target: { xRel: 0.5, yRel: 0.20, radius: 24 },
+    subtitle: "Dasar Penggerak Motor",
+    brief: "Beri daya kedua motor dan atur M1 & M2 SEARAH (CW) untuk meluncur lurus ke lingkaran hijau.",
+    starsRule: { threeStarsSec: 2.5, twoStarsSec: 4.0 },
+    start: { xRel: 0.5, yRel: 0.85, angle: -Math.PI / 2 },
+    target: { xRel: 0.5, yRel: 0.18, radius: 26 },
     obstacles: []
   },
   {
     id: 2,
-    title: "Level 2: Sudut Siku L",
-    subtitle: "Belok tajam di persimpangan",
-    brief: "Maju lurus, lalu belok 90° ke kanan (M1 SEARAH, M2 LAWAN), kemudian melaju ke lingkaran hijau.",
+    title: "Level 2: Belokan Sudut L",
+    subtitle: "Tikungan 90 Derajat",
+    brief: "Maju lurus, belok kanan 90° (M1 CW & M2 CCW selama ~0.75 detik), lalu meluncur ke finis.",
     starsRule: { threeStarsSec: 3.8, twoStarsSec: 5.5 },
     start: { xRel: 0.22, yRel: 0.82, angle: -Math.PI / 2 },
-    target: { xRel: 0.78, yRel: 0.22, radius: 22 },
+    target: { xRel: 0.78, yRel: 0.22, radius: 24 },
     obstacles: [
-      { xRel: 0.44, yRel: 0.45, wRel: 0.12, hRel: 0.55, label: "TEMBOK" }
+      { xRel: 0.44, yRel: 0.48, wRel: 0.12, hRel: 0.52, label: "TEMBOK" }
     ]
   },
   {
     id: 3,
-    title: "Level 3: Slalom Zig-Zag",
-    subtitle: "Lewati celah di antara rintangan",
-    brief: "Jalur lurus ditutup! Program manuver belok kanan lalu kiri melewati celah sempit.",
-    starsRule: { threeStarsSec: 5.5, twoStarsSec: 8.0 },
+    title: "Level 3: Manuver Menghindar",
+    subtitle: "Menghindari Rintangan Tunggal",
+    brief: "Satu balok rintangan ada di tengah lintasan. Belok sedikit ke samping sebelum meluncur ke titik target.",
+    starsRule: { threeStarsSec: 4.5, twoStarsSec: 6.5 },
     start: { xRel: 0.5, yRel: 0.85, angle: -Math.PI / 2 },
-    target: { xRel: 0.5, yRel: 0.16, radius: 20 },
+    target: { xRel: 0.5, yRel: 0.15, radius: 24 },
     obstacles: [
-      { xRel: 0.15, yRel: 0.58, wRel: 0.45, hRel: 0.08, label: "BLOK A" },
-      { xRel: 0.42, yRel: 0.36, wRel: 0.45, hRel: 0.08, label: "BLOK B" }
+      { xRel: 0.35, yRel: 0.45, wRel: 0.30, hRel: 0.10, label: "PENGHALANG" }
     ]
   },
   {
     id: 4,
-    title: "Level 4: Putar Balik Huruf U",
-    subtitle: "Putaran balik haluan 180 derajat",
-    brief: "Meluncur ke lorong kiri, lakukan putaran 180 derajat, lalu meluncur turun ke kanan.",
-    starsRule: { threeStarsSec: 6.8, twoStarsSec: 9.5 },
-    start: { xRel: 0.25, yRel: 0.82, angle: -Math.PI / 2 },
-    target: { xRel: 0.75, yRel: 0.82, radius: 22 },
+    title: "Level 4: Slalom Zig-Zag",
+    subtitle: "Dua Belokan Beruntun",
+    brief: "Lewati celah di antara dua balok. Lakukan belokan pertama ke kanan lalu belokan kedua ke kiri.",
+    starsRule: { threeStarsSec: 5.5, twoStarsSec: 8.0 },
+    start: { xRel: 0.5, yRel: 0.85, angle: -Math.PI / 2 },
+    target: { xRel: 0.5, yRel: 0.15, radius: 22 },
     obstacles: [
-      { xRel: 0.45, yRel: 0.25, wRel: 0.10, hRel: 0.75, label: "PEMBATAS" }
+      { xRel: 0.15, yRel: 0.60, wRel: 0.45, hRel: 0.08, label: "RINTANGAN A" },
+      { xRel: 0.40, yRel: 0.38, wRel: 0.45, hRel: 0.08, label: "RINTANGAN B" }
     ]
   },
   {
     id: 5,
-    title: "Level 5: Rebound Sensor Bumper",
-    subtitle: "Gunakan sensor sentuh untuk berbalik",
-    brief: "Dinding beton menghalangi jalan. Gunakan blok 'JIKA SENTUH' untuk mundur dan berbelok saat menabrak!",
+    title: "Level 5: Putaran Balik Huruf U",
+    subtitle: "Putaran 180 Derajat",
+    brief: "Melaju ke lorong atas, lakukan putar balik 180° di ruang terbuka, lalu turun ke finis sebelah kanan.",
+    starsRule: { threeStarsSec: 6.5, twoStarsSec: 9.5 },
+    start: { xRel: 0.22, yRel: 0.82, angle: -Math.PI / 2 },
+    target: { xRel: 0.78, yRel: 0.82, radius: 24 },
+    obstacles: [
+      { xRel: 0.44, yRel: 0.28, wRel: 0.12, hRel: 0.72, label: "PEMBATAS" }
+    ]
+  },
+  {
+    id: 6,
+    title: "Level 6: Bumper Sentuh Rebound",
+    subtitle: "Deteksi Tabrakan Otomatis",
+    brief: "Dinding beton menghalangi jalur. Gunakan 'JIKA [SENTUH] DITEKAN' untuk otomatis mundur dan membelokkan mobil!",
     starsRule: { threeStarsSec: 5.5, twoStarsSec: 8.5 },
     start: { xRel: 0.28, yRel: 0.82, angle: -Math.PI / 2 },
     target: { xRel: 0.80, yRel: 0.80, radius: 22 },
@@ -63,17 +76,56 @@ window.GAME_LEVELS = [
     ]
   },
   {
-    id: 6,
-    title: "Level 6: Labirin Kotak Spiral",
-    subtitle: "Optimasi logika perulangan",
-    brief: "Masuk ke pusat spiral. Gunakan blok 'ULANGI 4x' agar programmu tetap ringkas!",
+    id: 7,
+    title: "Level 7: Lintasan Z",
+    subtitle: "Navigasi Tiga Segmen",
+    brief: "Bermanuver melintasi lorong berbentuk huruf Z: maju, belok kanan 90°, maju, belok kiri 90°, lalu ke finis.",
+    starsRule: { threeStarsSec: 6.5, twoStarsSec: 9.5 },
+    start: { xRel: 0.20, yRel: 0.85, angle: -Math.PI / 2 },
+    target: { xRel: 0.80, yRel: 0.15, radius: 22 },
+    obstacles: [
+      { xRel: 0.05, yRel: 0.35, wRel: 0.65, hRel: 0.08, label: "DINDING ATAS" },
+      { xRel: 0.30, yRel: 0.62, wRel: 0.65, hRel: 0.08, label: "DINDING BAWAH" }
+    ]
+  },
+  {
+    id: 8,
+    title: "Level 8: Koridor Cincin Kotak",
+    subtitle: "Membagi Durasi Belok",
+    brief: "Blok tengah besar memaksa mobil mengitari perimeter luar arena untuk mencapai sasaran di seberang.",
+    starsRule: { threeStarsSec: 7.5, twoStarsSec: 11.0 },
+    start: { xRel: 0.20, yRel: 0.85, angle: -Math.PI / 2 },
+    target: { xRel: 0.80, yRel: 0.85, radius: 22 },
+    obstacles: [
+      { xRel: 0.35, yRel: 0.30, wRel: 0.30, hRel: 0.40, label: "PULAU PUSAT" }
+    ]
+  },
+  {
+    id: 9,
+    title: "Level 9: Tantangan Pengulangan (Loop)",
+    subtitle: "Pola Berulang dengan ULANGI 4x",
+    brief: "Lintasan spiral mengitari pembatas. Susun pola [Maju -> Belok] di dalam blok 'ULANGI' agar kodemu rapi!",
     starsRule: { threeStarsSec: 8.5, twoStarsSec: 13.0 },
     start: { xRel: 0.15, yRel: 0.85, angle: -Math.PI / 2 },
-    target: { xRel: 0.50, yRel: 0.50, radius: 18 },
+    target: { xRel: 0.50, yRel: 0.50, radius: 20 },
     obstacles: [
-      { xRel: 0.30, yRel: 0.30, wRel: 0.40, hRel: 0.06, label: "BLOK 1" },
-      { xRel: 0.65, yRel: 0.35, wRel: 0.06, hRel: 0.40, label: "BLOK 2" },
-      { xRel: 0.30, yRel: 0.70, wRel: 0.40, hRel: 0.06, label: "BLOK 3" }
+      { xRel: 0.30, yRel: 0.30, wRel: 0.40, hRel: 0.06, label: "SEKAT 1" },
+      { xRel: 0.65, yRel: 0.36, wRel: 0.06, hRel: 0.36, label: "SEKAT 2" },
+      { xRel: 0.30, yRel: 0.66, wRel: 0.41, hRel: 0.06, label: "SEKAT 3" }
+    ]
+  },
+  {
+    id: 10,
+    title: "Level 10: Grand Prix Ekspedisi",
+    subtitle: "Ujian Akhir Robotika",
+    brief: "Uji seluruh keahlianmu: kombinasikan navigasi jarak jauh, penghindaran rintangan, dan ketepatan rem!",
+    starsRule: { threeStarsSec: 10.0, twoStarsSec: 15.0 },
+    start: { xRel: 0.15, yRel: 0.88, angle: -Math.PI / 2 },
+    target: { xRel: 0.85, yRel: 0.15, radius: 20 },
+    obstacles: [
+      { xRel: 0.30, yRel: 0.55, wRel: 0.10, hRel: 0.45, label: "GERBANG 1" },
+      { xRel: 0.55, yRel: 0.00, wRel: 0.10, hRel: 0.45, label: "GERBANG 2" },
+      { xRel: 0.75, yRel: 0.55, wRel: 0.10, hRel: 0.25, label: "HALANGAN AKHIR" }
     ]
   }
 ];

@@ -1,717 +1,795 @@
 <!DOCTYPE html>
 <html lang="id">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Gim Robot Studuino: Misi Ekspedisi</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="levels.js"></script>
-    <style>
-        html,
-        body {
-            background-color: #020617;
-            min-height: 100%;
-            user-select: none;
-            -webkit-touch-callout: none;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Gim Robot Studuino: Misi Ekspedisi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="levels.js"></script>
+  <style>
+    html, body {
+      background-color: #020617;
+      min-height: 100%;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
+    /* Drop Indicators */
+    .drop-indicator-top { border-top: 3px solid #38bdf8 !important; box-shadow: 0 -3px 6px rgba(56, 189, 248, 0.5); }
+    .drop-indicator-bottom { border-bottom: 3px solid #38bdf8 !important; box-shadow: 0 3px 6px rgba(56, 189, 248, 0.5); }
+    .drop-indicator-inside { background-color: rgba(56, 189, 248, 0.15) !important; border: 2px dashed #38bdf8 !important; }
+    .drop-indicator-wrap { outline: 2px dashed #f59e0b !important; outline-offset: 2px; background-color: rgba(245, 158, 11, 0.12) !important; }
 
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
+    #touchGhost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      display: none;
+    }
 
-        /* Drop Indicators */
-        .drop-indicator-top {
-            border-top: 3px solid #38bdf8 !important;
-            box-shadow: 0 -3px 6px rgba(56, 189, 248, 0.5);
-        }
-
-        .drop-indicator-bottom {
-            border-bottom: 3px solid #38bdf8 !important;
-            box-shadow: 0 3px 6px rgba(56, 189, 248, 0.5);
-        }
-
-        .drop-indicator-inside {
-            background-color: rgba(56, 189, 248, 0.15) !important;
-            border: 2px dashed #38bdf8 !important;
-        }
-
-        .drop-indicator-wrap {
-            outline: 2px dashed #f59e0b !important;
-            outline-offset: 2px;
-            background-color: rgba(245, 158, 11, 0.12) !important;
-        }
-
-        #touchGhost {
-            position: fixed;
-            pointer-events: none;
-            z-index: 9999;
-            transform: translate(-50%, -50%);
-            display: none;
-        }
-
-        .is-moving {
-            opacity: 0.25;
-            transform: scale(0.96);
-        }
-
-        [data-block-id] {
-            touch-action: none;
-        }
-
-        #paletteScrollContainer {
-            touch-action: pan-x;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .palette-item {
-            touch-action: pan-x;
-        }
-    </style>
+    .is-moving { opacity: 0.25; transform: scale(0.96); }
+    [data-block-id] { touch-action: none; }
+    #paletteScrollContainer { touch-action: pan-x; -webkit-overflow-scrolling: touch; }
+    .palette-item { touch-action: pan-x; }
+  </style>
 </head>
-
 <body class="bg-slate-950 text-slate-100 font-sans p-3 max-w-md mx-auto flex flex-col gap-2.5">
 
-    <div id="touchGhost"
-        class="px-2.5 py-1.5 rounded-lg border border-sky-400 bg-sky-950/95 text-sky-200 text-[10px] font-mono shadow-2xl">
+  <div id="touchGhost" class="px-2.5 py-1.5 rounded-lg border border-sky-400 bg-sky-950/95 text-sky-200 text-[10px] font-mono shadow-2xl"></div>
+
+  <!-- Header Skor & Level -->
+  <header class="flex items-center justify-between pb-1 border-b border-slate-800">
+    <div class="flex items-center gap-1.5">
+      <span class="text-sm">🎮</span>
+      <div>
+        <h1 class="text-xs font-bold text-sky-400">Ekspedisi Studuino</h1>
+        <div id="stageTracker" class="text-[9px] text-slate-400 font-mono">Level 1 / 10</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-1">
+      <button onclick="toggleLevelSelectModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold border border-slate-700 flex items-center gap-1">
+        <span>🗺️</span> Level
+      </button>
+      <div id="starDisplay" class="bg-slate-900 border border-slate-700 px-2 py-0.5 rounded-full text-[10px] text-amber-400 font-mono font-bold">
+        ⭐⭐⭐
+      </div>
+      <button onclick="openTutorial()" class="bg-indigo-600 active:bg-indigo-500 text-white px-2 py-0.5 rounded-full text-[9px] font-medium shadow">
+        Buku Trik
+      </button>
+    </div>
+  </header>
+
+  <!-- Input Nama Siswa untuk Tracker Google Sheets -->
+  <div class="flex items-center gap-2 bg-slate-900/90 border border-slate-800 rounded-xl px-2.5 py-1.5 shadow-inner">
+    <span class="text-slate-400 font-mono text-[10px] font-bold flex-shrink-0">Siswa:</span>
+    <input 
+      id="studentNameInput" 
+      type="text" 
+      placeholder="Ketik nama lengkap..." 
+      class="bg-transparent text-sky-300 font-bold focus:outline-none w-full text-xs font-mono"
+      onchange="saveStudentName(this.value)"
+    />
+  </div>
+
+  <!-- Panggung Permainan (Arena Simulasi 4:3) -->
+  <div class="relative w-full aspect-[4/3] min-h-[290px] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner">
+    <canvas id="simCanvas" class="w-full h-full block"></canvas>
+    
+    <!-- HUD Info Telemetri -->
+    <div class="absolute top-1.5 left-1.5 bg-slate-950/90 backdrop-blur-sm border border-slate-800 rounded px-1.5 py-0.5 text-[8px] font-mono text-slate-300 flex gap-2">
+      <div>M1 (Kiri): <span id="hudM1" class="text-sky-400 font-bold">MATI</span></div>
+      <div>M2 (Kanan): <span id="hudM2" class="text-teal-400 font-bold">MATI</span></div>
+      <div>SENSOR: <span id="hudTouch" class="text-slate-500 font-bold">0</span></div>
+      <div>WAKTU: <span id="hudTimer" class="text-amber-300 font-bold">0.0s</span></div>
     </div>
 
-    <!-- Header Skor & Level -->
-    <header class="flex items-center justify-between pb-1 border-b border-slate-800">
-        <div class="flex items-center gap-1.5">
-            <span class="text-sm">🎮</span>
-            <div>
-                <h1 class="text-xs font-bold text-sky-400">Ekspedisi Studuino</h1>
-                <div id="stageTracker" class="text-[9px] text-slate-400 font-mono">Level 1 / 6</div>
-            </div>
-        </div>
-        <div class="flex items-center gap-1">
-            <!-- Tombol Pintasan ke Sandbox -->
-            <a href="sandbox.html"
-                class="bg-amber-600 active:bg-amber-500 text-slate-950 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold shadow flex items-center gap-1">
-                <span>🧪</span> Latihan
-            </a>
-            <div id="starDisplay"
-                class="bg-slate-900 border border-slate-700 px-2 py-0.5 rounded-full text-[10px] text-amber-400 font-mono font-bold">
-                ⭐⭐⭐
-            </div>
-            <button onclick="openTutorial()"
-                class="bg-indigo-600 active:bg-indigo-500 text-white px-2 py-0.5 rounded-full text-[9px] font-medium shadow">
-                Buku Trik
-            </button>
-        </div>
-    </header>
-
-    <!-- Panggung Permainan (Arena Simulasi Diperbesar ke aspect-[4/3] / min-h-[300px]) -->
-    <div
-        class="relative w-full aspect-[4/3] min-h-[290px] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner">
-        <canvas id="simCanvas" class="w-full h-full block"></canvas>
-
-        <!-- HUD Info Telemetri -->
-        <div
-            class="absolute top-1.5 left-1.5 bg-slate-950/90 backdrop-blur-sm border border-slate-800 rounded px-1.5 py-0.5 text-[8px] font-mono text-slate-300 flex gap-2">
-            <div>M1 (Kiri): <span id="hudM1" class="text-sky-400 font-bold">MATI</span></div>
-            <div>M2 (Kanan): <span id="hudM2" class="text-teal-400 font-bold">MATI</span></div>
-            <div>SENSOR: <span id="hudTouch" class="text-slate-500 font-bold">0</span></div>
-            <div>WAKTU: <span id="hudTimer" class="text-amber-300 font-bold">0.0s</span></div>
-        </div>
-
-        <!-- Modal Menang Level -->
-        <div id="winModal"
-            class="absolute inset-0 bg-slate-950/90 backdrop-blur-md hidden flex flex-col items-center justify-center p-3 text-center z-30">
-            <div class="text-3xl mb-1">🏆</div>
-            <div class="text-sm font-bold text-emerald-400 font-mono tracking-wide mb-0.5">LEVEL SELESAI!</div>
-            <div id="winStars" class="text-lg text-amber-400 mb-1">⭐⭐⭐</div>
-            <div id="winSubtitle" class="text-[10px] text-slate-300 mb-3 font-mono">Navigasi robotmu sempurna!</div>
-            <div class="flex gap-2">
-                <button onclick="replayCurrentLevel()"
-                    class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-xl font-mono">Ulangi</button>
-                <button onclick="nextLevel()" id="btnNextLevel"
-                    class="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl font-mono">Lanjut
-                    Level ➔</button>
-            </div>
-        </div>
-
-        <!-- Modal Gagal / Menabrak -->
-        <div id="crashModal"
-            class="absolute inset-0 bg-rose-950/90 backdrop-blur-md hidden flex flex-col items-center justify-center p-3 text-center z-30">
-            <div class="text-3xl mb-1">💥</div>
-            <div class="text-sm font-bold text-rose-400 font-mono tracking-wide mb-0.5">ROBOT MENABRAK!</div>
-            <div id="crashReason" class="text-[10px] text-slate-300 mb-3 font-mono">Mobil membentur pembatas jalur.
-            </div>
-            <button onclick="replayCurrentLevel()"
-                class="px-4 py-1.5 bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold text-xs rounded-xl font-mono">
-                Coba Lagi (Reset)
-            </button>
-        </div>
-
-        <!-- Tombol Kontrol Cepat Arena -->
-        <div class="absolute bottom-1.5 right-1.5 flex gap-1 z-10">
-            <button onclick="clearTrail()"
-                class="bg-slate-900/80 active:bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded text-[8px]">Hapus
-                Jejak</button>
-            <button onclick="stopAndReset()"
-                class="bg-rose-950/80 active:bg-rose-900 text-rose-300 border border-rose-700/60 px-1.5 py-0.5 rounded text-[8px]">■
-                Reset Mobil</button>
-        </div>
+    <!-- Modal Menang Level -->
+    <div id="winModal" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md hidden flex flex-col items-center justify-center p-3 text-center z-30">
+      <div class="text-3xl mb-1">🏆</div>
+      <div class="text-sm font-bold text-emerald-400 font-mono tracking-wide mb-0.5">LEVEL SELESAI!</div>
+      <div id="winStars" class="text-lg text-amber-400 mb-1">⭐⭐⭐</div>
+      <div id="winSubtitle" class="text-[10px] text-slate-300 mb-3 font-mono">Navigasi robotmu sempurna!</div>
+      <div class="flex gap-2">
+        <button onclick="replayCurrentLevel()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-xl font-mono">Ulangi</button>
+        <button onclick="nextLevel()" id="btnNextLevel" class="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs rounded-xl font-mono">Lanjut Level ➔</button>
+      </div>
     </div>
 
-    <!-- Kartu Instruksi Misi Aktif -->
-    <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2 flex flex-col gap-1">
-        <div class="flex justify-between items-center text-[10px]">
-            <span id="levelTitle" class="text-sky-400 font-bold font-mono">Level 1: Garis Lurus</span>
-            <span id="targetBadge" class="text-[9px] text-emerald-400 font-mono">Sasaran: Lingkaran Hijau</span>
-        </div>
-        <div id="levelBrief"
-            class="text-[10px] text-slate-300 font-mono leading-relaxed bg-slate-950/60 p-1.5 rounded border border-slate-800/80">
-            Aktifkan kedua motor untuk meluncur ke titik sasaran hijau.
-        </div>
+    <!-- Modal Gagal / Menabrak -->
+    <div id="crashModal" class="absolute inset-0 bg-rose-950/90 backdrop-blur-md hidden flex flex-col items-center justify-center p-3 text-center z-30">
+      <div class="text-3xl mb-1">💥</div>
+      <div class="text-sm font-bold text-rose-400 font-mono tracking-wide mb-0.5">ROBOT MENABRAK!</div>
+      <div id="crashReason" class="text-[10px] text-slate-300 mb-3 font-mono">Mobil membentur pembatas jalur.</div>
+      <button onclick="replayCurrentLevel()" class="px-4 py-1.5 bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold text-xs rounded-xl font-mono">
+        Coba Lagi (Reset)
+      </button>
     </div>
 
-    <!-- Palet Blok Horizontal Swipeable -->
-    <div id="paletteBar" class="bg-slate-900/60 border border-slate-800 rounded-xl p-2 transition-colors">
-        <div class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex justify-between">
-            <span>Perintah Studuino Asli</span>
-            <span class="text-sky-400 font-normal">Geser ke samping ➔</span>
-        </div>
+    <!-- Tombol Kontrol Cepat Arena -->
+    <div class="absolute bottom-1.5 right-1.5 flex gap-1 z-10">
+      <button onclick="clearTrail()" class="bg-slate-900/80 active:bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded text-[8px]">Hapus Jejak</button>
+      <button onclick="stopAndReset()" class="bg-rose-950/80 active:bg-rose-900 text-rose-300 border border-rose-700/60 px-1.5 py-0.5 rounded text-[8px]">■ Reset Mobil</button>
+    </div>
+  </div>
 
-        <div id="paletteScrollContainer" class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-            <!-- M1 (Motor Kiri) -->
-            <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none"
-                data-type="M1_SPEED_100">M1 KECEPATAN (100%)</div>
-            <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none"
-                data-type="M1_CW">M1 PUTAR (CW / SEARAH)</div>
-            <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none"
-                data-type="M1_CCW">M1 PUTAR (CCW / LAWAN)</div>
-            <div class="palette-item flex-shrink-0 text-[9px] bg-rose-950 border border-rose-500/50 text-rose-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none"
-                data-type="M1_BRAKE">M1 REM (BRAKE)</div>
-            <div class="palette-item flex-shrink-0 text-[9px] bg-slate-900 border border-slate-600 text-slate-300 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none"
-                data-type="M1_COAST">M1 BEBAS (COAST)</div>
+  <!-- Kartu Instruksi Misi Aktif -->
+  <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2 flex flex-col gap-1">
+    <div class="flex justify-between items-center text-[10px]">
+      <span id="levelTitle" class="text-sky-400 font-bold font-mono">Level 1: Garis Lurus</span>
+      <span id="targetBadge" class="text-[9px] text-emerald-400 font-mono">Sasaran: Lingkaran Hijau</span>
+    </div>
+    <div id="levelBrief" class="text-[10px] text-slate-300 font-mono leading-relaxed bg-slate-950/60 p-1.5 rounded border border-slate-800/80">
+      Aktifkan kedua motor untuk meluncur ke titik sasaran hijau.
+    </div>
+  </div>
 
-            <!-- M2 (Motor Kanan) -->
-            <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none"
-                data-type="M2_SPEED_100">M2 KECEPATAN (100%)</div>
-            <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none"
-                data-type="M2_CW">M2 PUTAR (CW / SEARAH)</div>
-            <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none"
-                data-type="M2_CCW">M2 PUTAR (CCW / LAWAN)</div>
-            <div class="palette-item flex-shrink-0 text-[9px] bg-rose-950 border border-rose-500/50 text-rose-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none"
-                data-type="M2_BRAKE">M2 REM (BRAKE)</div>
-            <div class="palette-item flex-shrink-0 text-[9px] bg-slate-900 border border-slate-600 text-slate-300 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none"
-                data-type="M2_COAST">M2 BEBAS (COAST)</div>
+  <!-- Palet Blok Horizontal Swipeable -->
+  <div id="paletteBar" class="bg-slate-900/60 border border-slate-800 rounded-xl p-2 transition-colors">
+    <div class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex justify-between">
+      <span>Perintah Studuino Asli</span>
+      <span class="text-sky-400 font-normal">Geser ke samping ➔</span>
+    </div>
+    
+    <div id="paletteScrollContainer" class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+      <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_SPEED_100">M1 KECEPATAN (100%)</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_CW">M1 PUTAR (CW / SEARAH)</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_CCW">M1 PUTAR (CCW / LAWAN)</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-rose-950 border border-rose-500/50 text-rose-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_BRAKE">M1 REM (BRAKE)</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-slate-900 border border-slate-600 text-slate-300 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_COAST">M1 BEBAS (COAST)</div>
 
-            <!-- Kontrol & Sensor -->
-            <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none"
-                data-type="WAIT">+ TUNGGU (detik)</div>
-            <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none"
-                data-type="REPEAT_4">ULANGI (4 kali)</div>
-            <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none"
-                data-type="FOREVER">SELAMANYA (Loop)</div>
-            <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none"
-                data-type="IF_TOUCH">JIKA [SENTUH] DITEKAN</div>
-        </div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M2_SPEED_100">M2 KECEPATAN (100%)</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M2_CW">M2 PUTAR (CW / SEARAH)</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M2_CCW">M2 PUTAR (CCW / LAWAN)</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-rose-950 border border-rose-500/50 text-rose-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M2_BRAKE">M2 REM (BRAKE)</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-slate-900 border border-slate-600 text-slate-300 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M2_COAST">M2 BEBAS (COAST)</div>
+
+      <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="WAIT">+ TUNGGU (detik)</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="REPEAT_4">ULANGI (4 kali)</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="FOREVER">SELAMANYA (Loop)</div>
+      <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="IF_TOUCH">JIKA [SENTUH] DITEKAN</div>
+    </div>
+  </div>
+
+  <!-- Area Kode Game -->
+  <div id="workspaceContainer" class="bg-slate-900/80 border border-slate-800 rounded-xl p-2 shadow-inner transition-all">
+    <div class="flex justify-between items-center mb-2">
+      <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">Program Misi Robot</span>
+      <button onclick="clearWorkspace()" class="px-2.5 py-1 bg-slate-800 active:bg-slate-700 text-slate-300 text-[10px] rounded">Kosongkan</button>
     </div>
 
-    <!-- Area Kode Game -->
-    <div id="workspaceContainer"
-        class="bg-slate-900/80 border border-slate-800 rounded-xl p-2 shadow-inner transition-all">
-        <div class="flex justify-between items-center mb-2">
-            <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">Program Misi Robot</span>
-            <button onclick="clearWorkspace()"
-                class="px-2.5 py-1 bg-slate-800 active:bg-slate-700 text-slate-300 text-[10px] rounded">Kosongkan</button>
-        </div>
+    <!-- Container Daftar Blok -->
+    <div id="mainDropZone" class="flex flex-col gap-1.5 min-h-[120px]"></div>
+  </div>
 
-        <!-- Container Daftar Blok -->
-        <div id="mainDropZone" class="flex flex-col gap-1.5 min-h-[120px]"></div>
+  <!-- Tombol Eksekusi Utama -->
+  <div class="pt-1 pb-4">
+    <button id="runBtn" onclick="runSimulation()" class="w-full py-3.5 bg-sky-500 active:bg-sky-400 text-slate-950 font-extrabold rounded-xl text-xs transition shadow-lg shadow-sky-950/50 flex items-center justify-center gap-2">
+      <span class="text-sm">▶</span> JALANKAN PROGRAM MISI
+    </button>
+  </div>
+
+  <!-- Modal Pilih Level (Grid 1-10) -->
+  <div id="levelSelectModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm p-4 hidden flex items-center justify-center">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-sm w-full p-4 shadow-2xl flex flex-col gap-3">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+        <h2 class="text-xs font-bold text-sky-400 font-mono flex items-center gap-1.5">
+          <span>🗺️</span> Peta Tingkat Level
+        </h2>
+        <button onclick="toggleLevelSelectModal()" class="text-slate-400 hover:text-white text-xs px-2 py-0.5 rounded bg-slate-800 font-mono">✕</button>
+      </div>
+
+      <div id="levelGridContainer" class="grid grid-cols-5 gap-2 my-1">
+        <!-- Rendered by JS -->
+      </div>
+
+      <div class="text-[9px] text-slate-400 font-mono text-center">
+        Selesaikan level sebelumnya untuk membuka level berikutnya!
+      </div>
     </div>
+  </div>
 
-    <!-- Tombol Eksekusi Utama -->
-    <div class="pt-1 pb-4">
-        <button id="runBtn" onclick="runSimulation()"
-            class="w-full py-3.5 bg-sky-500 active:bg-sky-400 text-slate-950 font-extrabold rounded-xl text-xs transition shadow-lg shadow-sky-950/50 flex items-center justify-center gap-2">
-            <span class="text-sm">▶</span> JALANKAN PROGRAM MISI
-        </button>
+  <!-- Modal Tutorial -->
+  <div id="tutorialModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm p-3 hidden flex items-center justify-center overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-4 shadow-2xl flex flex-col gap-2.5 my-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+        <h2 class="text-sm font-bold text-sky-400 flex items-center gap-1"><span>💡</span> Tips Belok Terkalibrasi</h2>
+        <button onclick="closeTutorial()" class="text-slate-400 font-bold text-sm px-2 py-0.5 rounded bg-slate-800">✕</button>
+      </div>
+      <div class="text-[10px] text-slate-300 leading-relaxed font-mono space-y-1.5">
+        <p>• <b>Maju Lurus:</b> Set <span class="text-sky-300">M1 PUTAR (CW)</span> dan <span class="text-teal-300">M2 PUTAR (CW)</span>[cite: 2].</p>
+        <p>• <b>Belok 90° Stabil:</b>
+          <br>- <b>Putar di Tempat:</b> M1 CW &amp; M2 CCW dengan TUNGGU sekitar <b>0.7s - 0.8s</b>.
+          <br>- <b>Belok Poros (Pivot):</b> Jalankan satu motor saja, rem motor lainnya dengan TUNGGU sekitar <b>1.2s - 1.4s</b>.
+        </p>
+        <p>• <b>Meluncur Bebas:</b> Motor terus melaju sampai dihentikan blok REM/BEBAS atau menyentuh sasaran[cite: 2].</p>
+      </div>
+      <button onclick="closeTutorial()" class="w-full py-2 bg-sky-600 active:bg-sky-500 text-slate-950 font-bold rounded-xl text-xs transition">
+        Saya Mengerti
+      </button>
     </div>
+  </div>
 
-    <!-- Modal Tutorial -->
-    <div id="tutorialModal"
-        class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm p-3 hidden flex items-center justify-center overflow-y-auto">
-        <div
-            class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-4 shadow-2xl flex flex-col gap-2.5 my-auto">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-                <h2 class="text-sm font-bold text-sky-400 flex items-center gap-1"><span>💡</span> Tips Belok
-                    Terkalibrasi</h2>
-                <button onclick="closeTutorial()"
-                    class="text-slate-400 font-bold text-sm px-2 py-0.5 rounded bg-slate-800">✕</button>
-            </div>
-            <div class="text-[10px] text-slate-300 leading-relaxed font-mono space-y-1.5">
-                <p>• <b>Maju Lurus:</b> Set <span class="text-sky-300">M1 PUTAR (CW)</span> dan <span
-                        class="text-teal-300">M2 PUTAR (CW)</span>[cite: 2].</p>
-                <p>• <b>Belok 90° Stabil:</b>
-                    <br>- <b>Putar di Tempat:</b> M1 CW &amp; M2 CCW dengan TUNGGU sekitar <b>0.7s - 0.8s</b>.
-                    <br>- <b>Belok Poros (Pivot):</b> Jalankan satu motor saja, rem motor lainnya dengan TUNGGU sekitar
-                    <b>1.2s - 1.4s</b>.
-                </p>
-                <p>• <b>Meluncur Bebas:</b> Motor terus melaju sampai dihentikan blok REM/BEBAS atau menyentuh
-                    sasaran[cite: 2].</p>
-            </div>
-            <button onclick="closeTutorial()"
-                class="w-full py-2 bg-sky-600 active:bg-sky-500 text-slate-950 font-bold rounded-xl text-xs transition">
-                Saya Mengerti
-            </button>
-        </div>
-    </div>
+  <script>
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+    const runBtn = document.getElementById('runBtn');
+    const workspaceContainer = document.getElementById('workspaceContainer');
+    const mainDropZone = document.getElementById('mainDropZone');
+    const touchGhost = document.getElementById('touchGhost');
 
-    <script>
-        const canvas = document.getElementById('simCanvas');
-        const ctx = canvas.getContext('2d');
-        const runBtn = document.getElementById('runBtn');
-        const workspaceContainer = document.getElementById('workspaceContainer');
-        const mainDropZone = document.getElementById('mainDropZone');
-        const touchGhost = document.getElementById('touchGhost');
+    const hudM1 = document.getElementById('hudM1');
+    const hudM2 = document.getElementById('hudM2');
+    const hudTouch = document.getElementById('hudTouch');
+    const hudTimer = document.getElementById('hudTimer');
 
-        const hudM1 = document.getElementById('hudM1');
-        const hudM2 = document.getElementById('hudM2');
-        const hudTouch = document.getElementById('hudTouch');
-        const hudTimer = document.getElementById('hudTimer');
+    const winModal = document.getElementById('winModal');
+    const crashModal = document.getElementById('crashModal');
+    const winStars = document.getElementById('winStars');
+    const starDisplay = document.getElementById('starDisplay');
+    const levelSelectModal = document.getElementById('levelSelectModal');
 
-        const winModal = document.getElementById('winModal');
-        const crashModal = document.getElementById('crashModal');
-        const winStars = document.getElementById('winStars');
-        const starDisplay = document.getElementById('starDisplay');
+    // ============================================================
+    // GOOGLE APPS SCRIPT WEB APP INTEGRATION (TRACKER)
+    // ============================================================
+    // Masukkan URL Deployment Google Apps Script Anda di sini:
+    const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbykzG5CrJHiaXozizcMCSInRi_4vT0XhYse1XaFIEn829BrQCX36jpLkZyd-3vEN7WT/exec";
 
-        // ============================================================
-        // KINEMATIKA NATURAL & STABIL
-        // ============================================================
-        const WHEEL_BASE = 37.;
-        const MAX_LINEAR_SPEED = 75;
-        const TURN_RATE = 0.8;
+    function saveStudentName(name) {
+      localStorage.setItem('studuino_student_name', name.trim());
+    }
 
-        let canvasLogicalWidth = 320;
-        let canvasLogicalHeight = 240;
+    function getStudentName() {
+      return localStorage.getItem('studuino_student_name') || "Siswa";
+    }
 
-        let activeLevelIndex = 0;
-        let robot = {
-            x: 0,
-            y: 0,
-            angle: -Math.PI / 2,
-            m1: { speed: 0, mode: 'COAST', phase: 0, currentSpeed: 0 },
-            m2: { speed: 0, mode: 'COAST', phase: 0, currentSpeed: 0 }
-        };
+    async function logProgressToSheets(levelId, starsEarned, durationSeconds, codeTree) {
+      if (!APPS_SCRIPT_WEB_APP_URL || APPS_SCRIPT_WEB_APP_URL.includes("YOUR_APPS_SCRIPT")) {
+        console.warn("Apps Script URL belum disetel.");
+        return;
+      }
 
-        let pathHistory = [];
-        let isRunning = false;
-        let animFrame = null;
-        let lastPhysicsTime = 0;
-        let missionStartTime = 0;
-        let touchSensorActive = false;
-        let currentExecutionId = 0;
+      const payload = {
+        studentName: getStudentName(),
+        level: levelId,
+        stars: starsEarned,
+        timeTaken: durationSeconds,
+        code: codeTree
+      };
 
-        const FALLBACK_LEVELS = [
-            {
-                id: 1,
-                title: "Level 1: Garis Lurus",
-                subtitle: "Luncurkan robot ke depan",
-                brief: "Beri daya kedua motor untuk mencapai titik finis hijau.",
-                starsRule: { threeStarsSec: 2.2, twoStarsSec: 3.8 },
-                start: { xRel: 0.5, yRel: 0.85, angle: -Math.PI / 2 },
-                target: { xRel: 0.5, yRel: 0.15, radius: 26 },
-                obstacles: []
-            }
-        ];
+      try {
+        await fetch(APPS_SCRIPT_WEB_APP_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify(payload)
+        });
+        console.log(`Progress level ${levelId} terkirim ke Sheets.`);
+      } catch (err) {
+        console.error("Gagal mengirim data ke Sheets:", err);
+      }
+    }
 
-        let programTree = [
-            { id: 1, type: 'M1_SPEED_100', text: 'M1 KECEPATAN (100%)' },
-            { id: 2, type: 'M2_SPEED_100', text: 'M2 KECEPATAN (100%)' },
-            { id: 3, type: 'M1_CW', text: 'M1 PUTAR (CW / SEARAH)' },
-            { id: 4, type: 'M2_CW', text: 'M2 PUTAR (CW / SEARAH)' }
-        ];
+    // ============================================================
+    // KINEMATIKA NATURAL & STABIL
+    // ============================================================
+    const WHEEL_BASE = 36;
+    const MAX_LINEAR_SPEED = 75;
+    const TURN_RATE = 1.0;
 
-        let nextBlockId = 3000;
+    let canvasLogicalWidth = 320;
+    let canvasLogicalHeight = 240;
 
-        function getLevelList() {
-            return (window.GAME_LEVELS && window.GAME_LEVELS.length > 0) ? window.GAME_LEVELS : FALLBACK_LEVELS;
-        }
+    let activeLevelIndex = 0;
+    let robot = {
+      x: 0,
+      y: 0,
+      angle: -Math.PI / 2,
+      m1: { speed: 0, mode: 'COAST', phase: 0, currentSpeed: 0 },
+      m2: { speed: 0, mode: 'COAST', phase: 0, currentSpeed: 0 }
+    };
 
-        function getActiveLevel() {
-            const list = getLevelList();
-            return list[activeLevelIndex] || list[0];
-        }
+    let pathHistory = [];
+    let isRunning = false;
+    let animFrame = null;
+    let lastPhysicsTime = 0;
+    let missionStartTime = 0;
+    let touchSensorActive = false;
+    let currentExecutionId = 0;
 
-        function loadLevel(index) {
-            const list = getLevelList();
-            activeLevelIndex = Math.max(0, Math.min(list.length - 1, index));
-            const lvl = getActiveLevel();
+    // ============================================================
+    // LOCALSTORAGE PERSISTENSI PROGRESS & KODE
+    // ============================================================
+    const STORAGE_KEY_PROGRESS = 'studuino_student_progress_v2';
+    const STORAGE_KEY_CODE = 'studuino_code_workspace_v2';
 
-            document.getElementById('stageTracker').textContent = `Level ${lvl.id} / ${list.length}`;
-            document.getElementById('levelTitle').textContent = lvl.title;
-            document.getElementById('levelBrief').textContent = lvl.brief;
+    let userProgress = {
+      highestUnlocked: 0,
+      starsPerLevel: {}
+    };
 
-            winModal.classList.add('hidden');
-            crashModal.classList.add('hidden');
-            stopAndReset();
-        }
+    function loadUserProgress() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY_PROGRESS);
+        if (saved) userProgress = Object.assign(userProgress, JSON.parse(saved));
+      } catch (e) {}
+    }
 
-        function replayCurrentLevel() {
-            winModal.classList.add('hidden');
-            crashModal.classList.add('hidden');
-            stopAndReset();
-        }
+    function saveUserProgress() {
+      try {
+        localStorage.setItem(STORAGE_KEY_PROGRESS, JSON.stringify(userProgress));
+      } catch (e) {}
+    }
 
-        function nextLevel() {
-            const list = getLevelList();
-            if (activeLevelIndex < list.length - 1) {
-                loadLevel(activeLevelIndex + 1);
-            } else {
-                alert("Luar biasa! Seluruh misi ekspedisi Studuino berhasil kamu taklukkan!");
-                loadLevel(0);
-            }
-        }
+    function saveWorkspaceCode() {
+      try {
+        localStorage.setItem(`${STORAGE_KEY_CODE}_lvl_${activeLevelIndex}`, JSON.stringify(programTree));
+      } catch (e) {}
+    }
 
-        function getBlockSpec(type) {
-            switch (type) {
-                case 'M1_SPEED_100': return { text: 'M1 KECEPATAN (100%)', color: 'bg-sky-950 border-sky-500/80 text-sky-200' };
-                case 'M1_CW': return { text: 'M1 PUTAR (CW / SEARAH)', color: 'bg-sky-950 border-sky-500/80 text-sky-200' };
-                case 'M1_CCW': return { text: 'M1 PUTAR (CCW / LAWAN)', color: 'bg-sky-950 border-sky-500/80 text-sky-200' };
-                case 'M1_BRAKE': return { text: 'M1 REM (BRAKE)', color: 'bg-rose-950 border-rose-500/80 text-rose-200' };
-                case 'M1_COAST': return { text: 'M1 BEBAS (COAST)', color: 'bg-slate-900 border-slate-600 text-slate-300' };
-
-                case 'M2_SPEED_100': return { text: 'M2 KECEPATAN (100%)', color: 'bg-teal-950 border-teal-500/80 text-teal-200' };
-                case 'M2_CW': return { text: 'M2 PUTAR (CW / SEARAH)', color: 'bg-teal-950 border-teal-500/80 text-teal-200' };
-                case 'M2_CCW': return { text: 'M2 PUTAR (CCW / LAWAN)', color: 'bg-teal-950 border-teal-500/80 text-teal-200' };
-                case 'M2_BRAKE': return { text: 'M2 REM (BRAKE)', color: 'bg-rose-950 border-rose-500/80 text-rose-200' };
-                case 'M2_COAST': return { text: 'M2 BEBAS (COAST)', color: 'bg-slate-900 border-slate-600 text-slate-300' };
-
-                case 'WAIT': return { isWait: true, color: 'bg-amber-950 border-amber-500/80 text-amber-200' };
-                case 'REPEAT_4': return { text: 'ULANGI (4 kali)', isContainer: true, color: 'bg-amber-950/80 border-amber-500 text-amber-300' };
-                case 'FOREVER': return { text: 'SELAMANYA (Loop)', isContainer: true, color: 'bg-amber-950/80 border-amber-500 text-amber-300' };
-                case 'IF_TOUCH': return { text: 'JIKA [SENTUH] DITEKAN', isContainer: true, color: 'bg-amber-950/80 border-amber-500 text-amber-300' };
-            }
-            return { text: type, color: 'bg-slate-800 border-slate-600 text-white' };
-        }
-
-        function createNode(type) {
-            const spec = getBlockSpec(type);
-            const node = { id: nextBlockId++, type: type };
-            if (spec.isWait) node.value = 1.0;
-            else node.text = spec.text;
-            if (spec.isContainer) node.children = [];
-            return node;
-        }
-
-        function updateWaitValue(id, val) {
-            const node = findNodeById(programTree, id);
-            if (node) {
-                const parsed = parseFloat(val);
-                node.value = (isNaN(parsed) || parsed <= 0) ? 1.0 : Math.max(0.1, Math.round(parsed * 10) / 10);
-            }
-        }
-
-        // Touch & Pointer Drag Engine
-        let activeDrag = null;
-        let lastDropTarget = null;
-        let lastDropPos = null;
-        let dragModeLocked = false;
-
-        function initPaletteTouch() {
-            document.querySelectorAll('.palette-item').forEach(item => {
-                item.addEventListener('pointerdown', (e) => {
-                    const type = item.dataset.type;
-                    startUniversalDrag(e, {
-                        isNew: true,
-                        type: type,
-                        ghostText: item.textContent,
-                        startX: e.clientX,
-                        startY: e.clientY
-                    });
-                });
-            });
-        }
-
-        function startUniversalDrag(e, payload) {
-            activeDrag = payload;
-            dragModeLocked = false;
-            lastDropTarget = null;
-            lastDropPos = null;
-
-            touchGhost.textContent = payload.ghostText;
-            touchGhost.style.left = `${e.clientX}px`;
-            touchGhost.style.top = `${e.clientY - 25}px`;
-
-            window.addEventListener('pointermove', onPointerMove, { passive: false });
-            window.addEventListener('pointerup', onPointerUp);
-            window.addEventListener('pointercancel', onPointerCancel);
-        }
-
-        function onPointerMove(e) {
-            if (!activeDrag) return;
-
-            const dx = e.clientX - activeDrag.startX;
-            const dy = e.clientY - activeDrag.startY;
-
-            if (activeDrag.isNew && !dragModeLocked) {
-                if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 7) {
-                    onPointerCancel();
-                    return;
-                }
-                if (Math.abs(dy) > 7 && Math.abs(dy) >= Math.abs(dx)) {
-                    dragModeLocked = true;
-                    touchGhost.style.display = 'block';
-                    if (e.cancelable) e.preventDefault();
-                } else {
-                    return;
-                }
-            } else {
-                if (Math.hypot(dx, dy) > 3) {
-                    dragModeLocked = true;
-                    touchGhost.style.display = 'block';
-                    if (!activeDrag.isNew) {
-                        const originalEl = document.querySelector(`[data-block-id="${activeDrag.id}"]`);
-                        if (originalEl) originalEl.classList.add('is-moving');
-                    }
-                    if (e.cancelable) e.preventDefault();
-                }
-            }
-
-            if (!dragModeLocked) return;
-
-            touchGhost.style.left = `${e.clientX}px`;
-            touchGhost.style.top = `${e.clientY - 25}px`;
-
-            clearAllIndicators();
-
-            if (e.clientY < 60) window.scrollBy({ top: -10, behavior: 'auto' });
-            else if (e.clientY > window.innerHeight - 60) window.scrollBy({ top: 10, behavior: 'auto' });
-
-            touchGhost.style.display = 'none';
-            const target = document.elementFromPoint(e.clientX, e.clientY);
-            touchGhost.style.display = 'block';
-
-            if (!target) return;
-
-            const isInsideWorkspace = target.closest('#mainDropZone');
-            if (!activeDrag.isNew && !isInsideWorkspace) {
-                lastDropTarget = null;
-                lastDropPos = 'delete';
-                workspaceContainer.classList.add('outline', 'outline-2', 'outline-rose-500/60');
-                return;
-            } else {
-                workspaceContainer.classList.remove('outline', 'outline-2', 'outline-rose-500/60');
-            }
-
-            const insideSlot = target.closest('[data-inside-slot]');
-            const blockEl = target.closest('[data-block-id]');
-
-            if (insideSlot) {
-                const containerId = parseInt(insideSlot.dataset.insideSlot);
-                if (!activeDrag.isNew && isDescendantOf(findNodeById(programTree, activeDrag.id), containerId)) {
-                    lastDropTarget = null;
-                    return;
-                }
-                insideSlot.classList.add('drop-indicator-inside');
-                lastDropTarget = insideSlot;
-                lastDropPos = 'inside';
-            } else if (blockEl) {
-                const targetId = parseInt(blockEl.dataset.blockId);
-                if (!activeDrag.isNew && (targetId === activeDrag.id || isDescendantOf(findNodeById(programTree, activeDrag.id), targetId))) {
-                    lastDropTarget = null;
-                    return;
-                }
-
-                const rect = blockEl.getBoundingClientRect();
-                const relY = e.clientY - rect.top;
-                const spec = getBlockSpec(activeDrag.type || findNodeById(programTree, activeDrag.id)?.type);
-
-                if (spec.isContainer && relY > rect.height * 0.25 && relY < rect.height * 0.75) {
-                    blockEl.classList.add('drop-indicator-wrap');
-                    lastDropPos = 'wrap';
-                } else if (relY < rect.height * 0.5) {
-                    blockEl.classList.add('drop-indicator-top');
-                    lastDropPos = 'before';
-                } else {
-                    blockEl.classList.add('drop-indicator-bottom');
-                    lastDropPos = 'after';
-                }
-                lastDropTarget = blockEl;
-            } else {
-                lastDropTarget = null;
-                lastDropPos = null;
-            }
-        }
-
-        function onPointerCancel() {
-            window.removeEventListener('pointermove', onPointerMove);
-            window.removeEventListener('pointerup', onPointerUp);
-            window.removeEventListener('pointercancel', onPointerCancel);
-            touchGhost.style.display = 'none';
-            workspaceContainer.classList.remove('outline', 'outline-2', 'outline-rose-500/60');
-            document.querySelectorAll('.is-moving').forEach(el => el.classList.remove('is-moving'));
-            clearAllIndicators();
-            activeDrag = null;
-            lastDropTarget = null;
-            lastDropPos = null;
-            dragModeLocked = false;
-        }
-
-        function onPointerUp(e) {
-            window.removeEventListener('pointermove', onPointerMove);
-            window.removeEventListener('pointerup', onPointerUp);
-            window.removeEventListener('pointercancel', onPointerCancel);
-            touchGhost.style.display = 'none';
-            workspaceContainer.classList.remove('outline', 'outline-2', 'outline-rose-500/60');
-            document.querySelectorAll('.is-moving').forEach(el => el.classList.remove('is-moving'));
-
-            if (activeDrag) {
-                if (activeDrag.isNew && !dragModeLocked) {
-                    programTree.push(createNode(activeDrag.type));
-                    renderWorkspace();
-                } else if (!activeDrag.isNew && lastDropPos === 'delete') {
-                    extractNodeById(programTree, activeDrag.id);
-                    renderWorkspace();
-                } else if (lastDropTarget) {
-                    let nodeToInsert = null;
-                    if (activeDrag.isNew) nodeToInsert = createNode(activeDrag.type);
-                    else nodeToInsert = extractNodeById(programTree, activeDrag.id);
-
-                    if (nodeToInsert) {
-                        if (lastDropPos === 'inside') {
-                            const containerId = parseInt(lastDropTarget.dataset.insideSlot);
-                            const container = findNodeById(programTree, containerId);
-                            if (container && container.children && container.id !== nodeToInsert.id && !isDescendantOf(nodeToInsert, container.id)) {
-                                container.children.push(nodeToInsert);
-                            }
-                        } else if (lastDropPos === 'wrap') {
-                            const targetId = parseInt(lastDropTarget.dataset.blockId);
-                            wrapExistingCodeInside(programTree, targetId, nodeToInsert);
-                        } else {
-                            const targetId = parseInt(lastDropTarget.dataset.blockId);
-                            if (targetId && targetId !== nodeToInsert.id && !isDescendantOf(nodeToInsert, targetId)) {
-                                insertNearNode(programTree, targetId, nodeToInsert, lastDropPos);
-                            }
-                        }
-                    }
-                    renderWorkspace();
-                } else if (activeDrag.isNew && dragModeLocked) {
-                    const target = document.elementFromPoint(e.clientX, e.clientY);
-                    if (target && target.closest('#mainDropZone')) {
-                        programTree.push(createNode(activeDrag.type));
-                        renderWorkspace();
-                    }
-                }
-            }
-
-            clearAllIndicators();
-            activeDrag = null;
-            lastDropTarget = null;
-            lastDropPos = null;
-            dragModeLocked = false;
-        }
-
-        function clearAllIndicators() {
-            document.querySelectorAll('.drop-indicator-top, .drop-indicator-bottom, .drop-indicator-inside, .drop-indicator-wrap').forEach(el => {
-                el.classList.remove('drop-indicator-top', 'drop-indicator-bottom', 'drop-indicator-inside', 'drop-indicator-wrap');
-            });
-        }
-
-        function isDescendantOf(parent, targetId) {
-            if (!parent || !parent.children) return false;
-            for (let child of parent.children) {
-                if (child.id === targetId) return true;
-                if (isDescendantOf(child, targetId)) return true;
-            }
-            return false;
-        }
-
-        function wrapExistingCodeInside(list, targetId, containerNode) {
-            for (let i = 0; i < list.length; i++) {
-                if (list[i].id === targetId) {
-                    const wrappedBlocks = list.splice(i);
-                    if (!containerNode.children) containerNode.children = [];
-                    containerNode.children.push(...wrappedBlocks);
-                    list.splice(i, 0, containerNode);
-                    return true;
-                }
-                if (list[i].children) {
-                    if (wrapExistingCodeInside(list[i].children, targetId, containerNode)) return true;
-                }
-            }
-            return false;
-        }
-
-        function findNodeById(list, id) {
-            for (let n of list) {
-                if (n.id === id) return n;
-                if (n.children) {
-                    const res = findNodeById(n.children, id);
-                    if (res) return res;
-                }
-            }
-            return null;
-        }
-
-        function extractNodeById(list, id) {
-            for (let i = 0; i < list.length; i++) {
-                if (list[i].id === id) return list.splice(i, 1)[0];
-                if (list[i].children) {
-                    const res = extractNodeById(list[i].children, id);
-                    if (res) return res;
-                }
-            }
-            return null;
-        }
-
-        function insertNearNode(list, targetId, newNode, place) {
-            for (let i = 0; i < list.length; i++) {
-                if (list[i].id === targetId) {
-                    const idx = place === 'before' ? i : i + 1;
-                    list.splice(idx, 0, newNode);
-                    return true;
-                }
-                if (list[i].children) {
-                    if (insertNearNode(list[i].children, targetId, newNode, place)) return true;
-                }
-            }
-            return false;
-        }
-
-        function deleteNode(id) {
-            extractNodeById(programTree, id);
+    function loadWorkspaceCodeForLevel(levelIdx) {
+      try {
+        const savedCode = localStorage.getItem(`${STORAGE_KEY_CODE}_lvl_${levelIdx}`);
+        if (savedCode) {
+          const parsed = JSON.parse(savedCode);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            programTree = parsed;
             renderWorkspace();
+            return;
+          }
+        }
+      } catch (e) {}
+
+      programTree = [
+        { id: 1, type: 'M1_SPEED_100', text: 'M1 KECEPATAN (100%)' },
+        { id: 2, type: 'M2_SPEED_100', text: 'M2 KECEPATAN (100%)' },
+        { id: 3, type: 'M1_CW', text: 'M1 PUTAR (CW / SEARAH)' },
+        { id: 4, type: 'M2_CW', text: 'M2 PUTAR (CW / SEARAH)' }
+      ];
+      renderWorkspace();
+    }
+
+    let nextBlockId = 5000;
+
+    function getLevelList() {
+      return (window.GAME_LEVELS && window.GAME_LEVELS.length > 0) ? window.GAME_LEVELS : [
+        {
+          id: 1,
+          title: "Level 1: Garis Lurus",
+          subtitle: "Luncurkan robot ke depan",
+          brief: "Beri daya kedua motor untuk mencapai titik finis hijau.",
+          starsRule: { threeStarsSec: 2.2, twoStarsSec: 3.8 },
+          start: { xRel: 0.5, yRel: 0.85, angle: -Math.PI / 2 },
+          target: { xRel: 0.5, yRel: 0.18, radius: 26 },
+          obstacles: []
+        }
+      ];
+    }
+
+    function getActiveLevel() {
+      const list = getLevelList();
+      return list[activeLevelIndex] || list[0];
+    }
+
+    function loadLevel(index) {
+      const list = getLevelList();
+      activeLevelIndex = Math.max(0, Math.min(list.length - 1, index));
+      const lvl = getActiveLevel();
+
+      document.getElementById('stageTracker').textContent = `Level ${lvl.id} / ${list.length}`;
+      document.getElementById('levelTitle').textContent = lvl.title;
+      document.getElementById('levelBrief').textContent = lvl.brief;
+
+      const recordStars = userProgress.starsPerLevel[activeLevelIndex] || '---';
+      starDisplay.textContent = recordStars === '---' ? 'Belum Ada Bintang' : recordStars;
+
+      winModal.classList.add('hidden');
+      crashModal.classList.add('hidden');
+      levelSelectModal.classList.add('hidden');
+
+      loadWorkspaceCodeForLevel(activeLevelIndex);
+      stopAndReset();
+    }
+
+    function replayCurrentLevel() {
+      winModal.classList.add('hidden');
+      crashModal.classList.add('hidden');
+      stopAndReset();
+    }
+
+    function nextLevel() {
+      const list = getLevelList();
+      if (activeLevelIndex < list.length - 1) {
+        loadLevel(activeLevelIndex + 1);
+      } else {
+        alert("Luar biasa! Seluruh 10 ekspedisi robotika Studuino berhasil kamu selesaikan!");
+        loadLevel(0);
+      }
+    }
+
+    function toggleLevelSelectModal() {
+      renderLevelGrid();
+      levelSelectModal.classList.toggle('hidden');
+    }
+
+    function renderLevelGrid() {
+      const list = getLevelList();
+      const container = document.getElementById('levelGridContainer');
+      container.innerHTML = '';
+
+      list.forEach((lvl, idx) => {
+        const isUnlocked = idx <= userProgress.highestUnlocked;
+        const isCurrent = idx === activeLevelIndex;
+        const stars = userProgress.starsPerLevel[idx] || '';
+
+        const btn = document.createElement('button');
+        btn.className = `p-2 rounded-xl text-center font-mono flex flex-col items-center justify-center border transition-all ${
+          isCurrent 
+            ? 'bg-sky-600 border-sky-400 text-slate-950 font-bold shadow-lg shadow-sky-950' 
+            : isUnlocked 
+              ? 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200' 
+              : 'bg-slate-950/80 border-slate-900 text-slate-600 cursor-not-allowed opacity-50'
+        }`;
+
+        btn.innerHTML = `
+          <span class="text-xs font-bold">${isUnlocked ? lvl.id : '🔒'}</span>
+          <span class="text-[8px] tracking-tight text-amber-300 mt-0.5">${stars || (isUnlocked ? '-' : '')}</span>
+        `;
+
+        if (isUnlocked) {
+          btn.onclick = () => loadLevel(idx);
+        }
+        container.appendChild(btn);
+      });
+    }
+
+    function getBlockSpec(type) {
+      switch(type) {
+        case 'M1_SPEED_100': return { text: 'M1 KECEPATAN (100%)', color: 'bg-sky-950 border-sky-500/80 text-sky-200' };
+        case 'M1_CW': return { text: 'M1 PUTAR (CW / SEARAH)', color: 'bg-sky-950 border-sky-500/80 text-sky-200' };
+        case 'M1_CCW': return { text: 'M1 PUTAR (CCW / LAWAN)', color: 'bg-sky-950 border-sky-500/80 text-sky-200' };
+        case 'M1_BRAKE': return { text: 'M1 REM (BRAKE)', color: 'bg-rose-950 border-rose-500/80 text-rose-200' };
+        case 'M1_COAST': return { text: 'M1 BEBAS (COAST)', color: 'bg-slate-900 border-slate-600 text-slate-300' };
+
+        case 'M2_SPEED_100': return { text: 'M2 KECEPATAN (100%)', color: 'bg-teal-950 border-teal-500/80 text-teal-200' };
+        case 'M2_CW': return { text: 'M2 PUTAR (CW / SEARAH)', color: 'bg-teal-950 border-teal-500/80 text-teal-200' };
+        case 'M2_CCW': return { text: 'M2 PUTAR (CCW / LAWAN)', color: 'bg-teal-950 border-teal-500/80 text-teal-200' };
+        case 'M2_BRAKE': return { text: 'M2 REM (BRAKE)', color: 'bg-rose-950 border-rose-500/80 text-rose-200' };
+        case 'M2_COAST': return { text: 'M2 BEBAS (COAST)', color: 'bg-slate-900 border-slate-600 text-slate-300' };
+
+        case 'WAIT': return { isWait: true, color: 'bg-amber-950 border-amber-500/80 text-amber-200' };
+        case 'REPEAT_4': return { text: 'ULANGI (4 kali)', isContainer: true, color: 'bg-amber-950/80 border-amber-500 text-amber-300' };
+        case 'FOREVER': return { text: 'SELAMANYA (Loop)', isContainer: true, color: 'bg-amber-950/80 border-amber-500 text-amber-300' };
+        case 'IF_TOUCH': return { text: 'JIKA [SENTUH] DITEKAN', isContainer: true, color: 'bg-amber-950/80 border-amber-500 text-amber-300' };
+      }
+      return { text: type, color: 'bg-slate-800 border-slate-600 text-white' };
+    }
+
+    function createNode(type) {
+      const spec = getBlockSpec(type);
+      const node = { id: nextBlockId++, type: type };
+      if (spec.isWait) node.value = 1.0;
+      else node.text = spec.text;
+      if (spec.isContainer) node.children = [];
+      return node;
+    }
+
+    function updateWaitValue(id, val) {
+      const node = findNodeById(programTree, id);
+      if (node) {
+        const parsed = parseFloat(val);
+        node.value = (isNaN(parsed) || parsed <= 0) ? 1.0 : Math.max(0.1, Math.round(parsed * 10) / 10);
+        saveWorkspaceCode();
+      }
+    }
+
+    // Touch & Pointer Drag Engine
+    let activeDrag = null;
+    let lastDropTarget = null;
+    let lastDropPos = null;
+    let dragModeLocked = false;
+
+    function initPaletteTouch() {
+      document.querySelectorAll('.palette-item').forEach(item => {
+        item.addEventListener('pointerdown', (e) => {
+          const type = item.dataset.type;
+          startUniversalDrag(e, { 
+            isNew: true, 
+            type: type, 
+            ghostText: item.textContent,
+            startX: e.clientX,
+            startY: e.clientY
+          });
+        });
+      });
+    }
+
+    function startUniversalDrag(e, payload) {
+      activeDrag = payload;
+      dragModeLocked = false;
+      lastDropTarget = null;
+      lastDropPos = null;
+
+      touchGhost.textContent = payload.ghostText;
+      touchGhost.style.left = `${e.clientX}px`;
+      touchGhost.style.top = `${e.clientY - 25}px`;
+
+      window.addEventListener('pointermove', onPointerMove, { passive: false });
+      window.addEventListener('pointerup', onPointerUp);
+      window.addEventListener('pointercancel', onPointerCancel);
+    }
+
+    function onPointerMove(e) {
+      if (!activeDrag) return;
+
+      const dx = e.clientX - activeDrag.startX;
+      const dy = e.clientY - activeDrag.startY;
+
+      if (activeDrag.isNew && !dragModeLocked) {
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 7) {
+          onPointerCancel();
+          return;
+        }
+        if (Math.abs(dy) > 7 && Math.abs(dy) >= Math.abs(dx)) {
+          dragModeLocked = true;
+          touchGhost.style.display = 'block';
+          if (e.cancelable) e.preventDefault();
+        } else {
+          return;
+        }
+      } else {
+        if (Math.hypot(dx, dy) > 3) {
+          dragModeLocked = true;
+          touchGhost.style.display = 'block';
+          if (!activeDrag.isNew) {
+            const originalEl = document.querySelector(`[data-block-id="${activeDrag.id}"]`);
+            if (originalEl) originalEl.classList.add('is-moving');
+          }
+          if (e.cancelable) e.preventDefault();
+        }
+      }
+
+      if (!dragModeLocked) return;
+
+      touchGhost.style.left = `${e.clientX}px`;
+      touchGhost.style.top = `${e.clientY - 25}px`;
+
+      clearAllIndicators();
+
+      if (e.clientY < 60) window.scrollBy({ top: -10, behavior: 'auto' });
+      else if (e.clientY > window.innerHeight - 60) window.scrollBy({ top: 10, behavior: 'auto' });
+
+      touchGhost.style.display = 'none';
+      const target = document.elementFromPoint(e.clientX, e.clientY);
+      touchGhost.style.display = 'block';
+
+      if (!target) return;
+
+      const isInsideWorkspace = target.closest('#mainDropZone');
+      if (!activeDrag.isNew && !isInsideWorkspace) {
+        lastDropTarget = null;
+        lastDropPos = 'delete';
+        workspaceContainer.classList.add('outline', 'outline-2', 'outline-rose-500/60');
+        return;
+      } else {
+        workspaceContainer.classList.remove('outline', 'outline-2', 'outline-rose-500/60');
+      }
+
+      const insideSlot = target.closest('[data-inside-slot]');
+      const blockEl = target.closest('[data-block-id]');
+
+      if (insideSlot) {
+        const containerId = parseInt(insideSlot.dataset.insideSlot);
+        if (!activeDrag.isNew && isDescendantOf(findNodeById(programTree, activeDrag.id), containerId)) {
+          lastDropTarget = null;
+          return;
+        }
+        insideSlot.classList.add('drop-indicator-inside');
+        lastDropTarget = insideSlot;
+        lastDropPos = 'inside';
+      } else if (blockEl) {
+        const targetId = parseInt(blockEl.dataset.blockId);
+        if (!activeDrag.isNew && (targetId === activeDrag.id || isDescendantOf(findNodeById(programTree, activeDrag.id), targetId))) {
+          lastDropTarget = null;
+          return;
         }
 
-        function clearWorkspace() {
-            if (confirm('Kosongkan susunan blok kode?')) {
-                programTree = [];
-                renderWorkspace();
+        const rect = blockEl.getBoundingClientRect();
+        const relY = e.clientY - rect.top;
+        const spec = getBlockSpec(activeDrag.type || findNodeById(programTree, activeDrag.id)?.type);
+
+        if (spec.isContainer && relY > rect.height * 0.25 && relY < rect.height * 0.75) {
+          blockEl.classList.add('drop-indicator-wrap');
+          lastDropPos = 'wrap';
+        } else if (relY < rect.height * 0.5) {
+          blockEl.classList.add('drop-indicator-top');
+          lastDropPos = 'before';
+        } else {
+          blockEl.classList.add('drop-indicator-bottom');
+          lastDropPos = 'after';
+        }
+        lastDropTarget = blockEl;
+      } else {
+        lastDropTarget = null;
+        lastDropPos = null;
+      }
+    }
+
+    function onPointerCancel() {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerCancel);
+      touchGhost.style.display = 'none';
+      workspaceContainer.classList.remove('outline', 'outline-2', 'outline-rose-500/60');
+      document.querySelectorAll('.is-moving').forEach(el => el.classList.remove('is-moving'));
+      clearAllIndicators();
+      activeDrag = null;
+      lastDropTarget = null;
+      lastDropPos = null;
+      dragModeLocked = false;
+    }
+
+    function onPointerUp(e) {
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerCancel);
+      touchGhost.style.display = 'none';
+      workspaceContainer.classList.remove('outline', 'outline-2', 'outline-rose-500/60');
+      document.querySelectorAll('.is-moving').forEach(el => el.classList.remove('is-moving'));
+
+      if (activeDrag) {
+        if (activeDrag.isNew && !dragModeLocked) {
+          programTree.push(createNode(activeDrag.type));
+          renderWorkspace();
+          saveWorkspaceCode();
+        } else if (!activeDrag.isNew && lastDropPos === 'delete') {
+          extractNodeById(programTree, activeDrag.id);
+          renderWorkspace();
+          saveWorkspaceCode();
+        } else if (lastDropTarget) {
+          let nodeToInsert = null;
+          if (activeDrag.isNew) nodeToInsert = createNode(activeDrag.type);
+          else nodeToInsert = extractNodeById(programTree, activeDrag.id);
+
+          if (nodeToInsert) {
+            if (lastDropPos === 'inside') {
+              const containerId = parseInt(lastDropTarget.dataset.insideSlot);
+              const container = findNodeById(programTree, containerId);
+              if (container && container.children && container.id !== nodeToInsert.id && !isDescendantOf(nodeToInsert, container.id)) {
+                container.children.push(nodeToInsert);
+              }
+            } else if (lastDropPos === 'wrap') {
+              const targetId = parseInt(lastDropTarget.dataset.blockId);
+              wrapExistingCodeInside(programTree, targetId, nodeToInsert);
+            } else {
+              const targetId = parseInt(lastDropTarget.dataset.blockId);
+              if (targetId && targetId !== nodeToInsert.id && !isDescendantOf(nodeToInsert, targetId)) {
+                insertNearNode(programTree, targetId, nodeToInsert, lastDropPos);
+              }
             }
+          }
+          renderWorkspace();
+          saveWorkspaceCode();
+        } else if (activeDrag.isNew && dragModeLocked) {
+          const target = document.elementFromPoint(e.clientX, e.clientY);
+          if (target && target.closest('#mainDropZone')) {
+            programTree.push(createNode(activeDrag.type));
+            renderWorkspace();
+            saveWorkspaceCode();
+          }
         }
+      }
 
-        function renderWorkspace() {
-            mainDropZone.innerHTML = '';
-            if (programTree.length === 0) {
-                mainDropZone.innerHTML = `
+      clearAllIndicators();
+      activeDrag = null;
+      lastDropTarget = null;
+      lastDropPos = null;
+      dragModeLocked = false;
+    }
+
+    function clearAllIndicators() {
+      document.querySelectorAll('.drop-indicator-top, .drop-indicator-bottom, .drop-indicator-inside, .drop-indicator-wrap').forEach(el => {
+        el.classList.remove('drop-indicator-top', 'drop-indicator-bottom', 'drop-indicator-inside', 'drop-indicator-wrap');
+      });
+    }
+
+    function isDescendantOf(parent, targetId) {
+      if (!parent || !parent.children) return false;
+      for (let child of parent.children) {
+        if (child.id === targetId) return true;
+        if (isDescendantOf(child, targetId)) return true;
+      }
+      return false;
+    }
+
+    function wrapExistingCodeInside(list, targetId, containerNode) {
+      for (let i = 0; i < list.length; i++) {
+        if (list[i].id === targetId) {
+          const wrappedBlocks = list.splice(i);
+          if (!containerNode.children) containerNode.children = [];
+          containerNode.children.push(...wrappedBlocks);
+          list.splice(i, 0, containerNode);
+          return true;
+        }
+        if (list[i].children) {
+          if (wrapExistingCodeInside(list[i].children, targetId, containerNode)) return true;
+        }
+      }
+      return false;
+    }
+
+    function findNodeById(list, id) {
+      for (let n of list) {
+        if (n.id === id) return n;
+        if (n.children) {
+          const res = findNodeById(n.children, id);
+          if (res) return res;
+        }
+      }
+      return null;
+    }
+
+    function extractNodeById(list, id) {
+      for (let i = 0; i < list.length; i++) {
+        if (list[i].id === id) return list.splice(i, 1)[0];
+        if (list[i].children) {
+          const res = extractNodeById(list[i].children, id);
+          if (res) return res;
+        }
+      }
+      return null;
+    }
+
+    function insertNearNode(list, targetId, newNode, place) {
+      for (let i = 0; i < list.length; i++) {
+        if (list[i].id === targetId) {
+          const idx = place === 'before' ? i : i + 1;
+          list.splice(idx, 0, newNode);
+          return true;
+        }
+        if (list[i].children) {
+          if (insertNearNode(list[i].children, targetId, newNode, place)) return true;
+        }
+      }
+      return false;
+    }
+
+    function deleteNode(id) {
+      extractNodeById(programTree, id);
+      renderWorkspace();
+      saveWorkspaceCode();
+    }
+
+    function clearWorkspace() {
+      if (confirm('Kosongkan susunan blok kode?')) {
+        programTree = [];
+        renderWorkspace();
+        saveWorkspaceCode();
+      }
+    }
+
+    function renderWorkspace() {
+      mainDropZone.innerHTML = '';
+      if (programTree.length === 0) {
+        mainDropZone.innerHTML = `
           <div class="text-center my-auto py-8 text-slate-500 text-[10px]">
             Tarik atau ketuk blok dari palet untuk menyusun kode misi robot.
           </div>
         `;
-                return;
-            }
+        return;
+      }
 
-            function buildDOM(nodes, parentEl) {
-                nodes.forEach(node => {
-                    const spec = getBlockSpec(node.type);
-                    const blockEl = document.createElement('div');
-                    blockEl.dataset.blockId = node.id;
+      function buildDOM(nodes, parentEl) {
+        nodes.forEach(node => {
+          const spec = getBlockSpec(node.type);
+          const blockEl = document.createElement('div');
+          blockEl.dataset.blockId = node.id;
 
-                    if (spec.isWait) {
-                        blockEl.className = `rounded-lg border ${spec.color} px-2 py-1 shadow-sm text-[10px] font-mono flex items-center justify-between transition-all cursor-grab active:cursor-grabbing select-none`;
-                        blockEl.innerHTML = `
+          if (spec.isWait) {
+            blockEl.className = `rounded-lg border ${spec.color} px-2 py-1 shadow-sm text-[10px] font-mono flex items-center justify-between transition-all cursor-grab active:cursor-grabbing select-none`;
+            blockEl.innerHTML = `
               <div class="flex items-center gap-1.5 flex-1 pointer-events-none">
                 <span class="text-amber-400 font-bold px-1 select-none text-xs">≡</span>
                 <span>TUNGGU</span>
@@ -720,9 +798,9 @@
               </div>
               <button onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs pointer-events-auto">✕</button>
             `;
-                    } else if (spec.isContainer) {
-                        blockEl.className = `rounded-xl border ${spec.color} p-1 shadow-sm text-xs flex flex-col gap-1 transition-all cursor-grab active:cursor-grabbing select-none`;
-                        blockEl.innerHTML = `
+          } else if (spec.isContainer) {
+            blockEl.className = `rounded-xl border ${spec.color} p-1 shadow-sm text-xs flex flex-col gap-1 transition-all cursor-grab active:cursor-grabbing select-none`;
+            blockEl.innerHTML = `
               <div class="flex items-center justify-between font-mono font-bold text-[10px] px-1 pointer-events-none">
                 <div class="flex items-center gap-1.5">
                   <span class="text-amber-400 font-bold px-1 select-none text-xs">≡</span>
@@ -734,433 +812,445 @@
               </div>
               <div class="text-[8px] font-mono text-amber-500/60 px-1 uppercase tracking-wider pointer-events-none">▲ Selesai</div>
             `;
-                        const innerSlot = blockEl.querySelector('[data-inside-slot]');
-                        buildDOM(node.children || [], innerSlot);
-                    } else {
-                        blockEl.className = `rounded-lg border ${spec.color} px-2 py-1 shadow-sm text-[10px] font-mono flex items-center justify-between transition-all cursor-grab active:cursor-grabbing select-none`;
-                        blockEl.innerHTML = `
+            const innerSlot = blockEl.querySelector('[data-inside-slot]');
+            buildDOM(node.children || [], innerSlot);
+          } else {
+            blockEl.className = `rounded-lg border ${spec.color} px-2 py-1 shadow-sm text-[10px] font-mono flex items-center justify-between transition-all cursor-grab active:cursor-grabbing select-none`;
+            blockEl.innerHTML = `
               <div class="flex items-center gap-1.5 pointer-events-none">
                 <span class="text-slate-400 font-bold px-1 select-none text-xs">≡</span>
                 <span>${escapeHtml(node.text)}</span>
               </div>
               <button onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs pointer-events-auto">✕</button>
             `;
-                    }
+          }
 
-                    blockEl.addEventListener('pointerdown', (e) => {
-                        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
-                        if (e.target.closest('[data-inside-slot]') && e.target !== blockEl) return;
+          blockEl.addEventListener('pointerdown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+            if (e.target.closest('[data-inside-slot]') && e.target !== blockEl) return;
 
-                        startUniversalDrag(e, {
-                            isNew: false,
-                            id: node.id,
-                            type: node.type,
-                            ghostText: node.text || (node.type === 'WAIT' ? `TUNGGU ${node.value}s` : 'BLOK'),
-                            startX: e.clientX,
-                            startY: e.clientY
-                        });
-                    });
+            startUniversalDrag(e, { 
+              isNew: false, 
+              id: node.id, 
+              type: node.type,
+              ghostText: node.text || (node.type === 'WAIT' ? `TUNGGU ${node.value}s` : 'BLOK'),
+              startX: e.clientX,
+              startY: e.clientY
+            });
+          });
 
-                    parentEl.appendChild(blockEl);
-                });
-            }
+          parentEl.appendChild(blockEl);
+        });
+      }
 
-            buildDOM(programTree, mainDropZone);
+      buildDOM(programTree, mainDropZone);
+    }
+
+    // ============================================================
+    // ARENA SIMULASI & KINEMATIKA ALAMI
+    // ============================================================
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvasLogicalWidth = rect.width;
+      canvasLogicalHeight = rect.height;
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+      drawScene();
+    }
+
+    function initCanvas() {
+      loadUserProgress();
+      const input = document.getElementById('studentNameInput');
+      if (input) input.value = localStorage.getItem('studuino_student_name') || '';
+
+      resizeCanvas();
+      loadLevel(userProgress.highestUnlocked || 0);
+      renderWorkspace();
+      initPaletteTouch();
+    }
+    window.addEventListener('resize', resizeCanvas);
+    setTimeout(initCanvas, 60);
+
+    function stopAndReset() {
+      isRunning = false;
+      currentExecutionId++;
+      if (animFrame) cancelAnimationFrame(animFrame);
+      
+      const lvl = getActiveLevel();
+      robot.x = canvasLogicalWidth * lvl.start.xRel;
+      robot.y = canvasLogicalHeight * lvl.start.yRel;
+      robot.angle = lvl.start.angle;
+      robot.m1 = { speed: 0, mode: 'COAST', phase: 0, currentSpeed: 0 };
+      robot.m2 = { speed: 0, mode: 'COAST', phase: 0, currentSpeed: 0 };
+      pathHistory = [{ x: robot.x, y: robot.y }];
+      touchSensorActive = false;
+      
+      runBtn.disabled = false;
+      runBtn.classList.remove('opacity-50');
+      hudTimer.textContent = '0.0s';
+
+      updateHud();
+      drawScene();
+    }
+
+    function clearTrail() {
+      pathHistory = [{ x: robot.x, y: robot.y }];
+      drawScene();
+    }
+
+    function checkCollision() {
+      if (robot.x <= 14 || robot.x >= canvasLogicalWidth - 14 || robot.y <= 14 || robot.y >= canvasLogicalHeight - 14) return true;
+
+      const lvl = getActiveLevel();
+      for (let obs of lvl.obstacles) {
+        const ox = canvasLogicalWidth * obs.xRel;
+        const oy = canvasLogicalHeight * obs.yRel;
+        const ow = canvasLogicalWidth * obs.wRel;
+        const oh = canvasLogicalHeight * obs.hRel;
+
+        if (robot.x + 12 >= ox && robot.x - 12 <= ox + ow &&
+            robot.y + 12 >= oy && robot.y - 12 <= oy + oh) {
+          return true;
         }
+      }
+      return false;
+    }
 
-        // ============================================================
-        // ARENA SIMULASI & KINEMATIKA ALAMI
-        // ============================================================
-        function resizeCanvas() {
-            const dpr = window.devicePixelRatio || 1;
-            const rect = canvas.getBoundingClientRect();
-            canvasLogicalWidth = rect.width;
-            canvasLogicalHeight = rect.height;
-            canvas.width = rect.width * dpr;
-            canvas.height = rect.height * dpr;
-            ctx.scale(dpr, dpr);
-            drawScene();
-        }
+    function checkGoalReach() {
+      const lvl = getActiveLevel();
+      const tx = canvasLogicalWidth * lvl.target.xRel;
+      const ty = canvasLogicalHeight * lvl.target.yRel;
+      return Math.hypot(robot.x - tx, robot.y - ty) < lvl.target.radius;
+    }
 
-        function initCanvas() {
-            resizeCanvas();
-            loadLevel(0);
-            renderWorkspace();
-            initPaletteTouch();
-        }
-        window.addEventListener('resize', resizeCanvas);
-        setTimeout(initCanvas, 60);
+    function updateHud() {
+      const m1Text = (robot.m1.mode === 'COAST') ? 'BEBAS' : (robot.m1.mode === 'BRAKE' ? 'REM' : `${robot.m1.mode} (${robot.m1.speed}%)`);
+      const m2Text = (robot.m2.mode === 'COAST') ? 'BEBAS' : (robot.m2.mode === 'BRAKE' ? 'REM' : `${robot.m2.mode} (${robot.m2.speed}%)`);
+      hudM1.textContent = m1Text;
+      hudM2.textContent = m2Text;
+      hudTouch.textContent = touchSensorActive ? '1' : '0';
+      hudTouch.className = touchSensorActive ? 'text-rose-400 font-bold animate-pulse' : 'text-slate-500';
+    }
 
-        function stopAndReset() {
-            isRunning = false;
-            currentExecutionId++;
-            if (animFrame) cancelAnimationFrame(animFrame);
+    function drawScene() {
+      ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
 
-            const lvl = getActiveLevel();
-            robot.x = canvasLogicalWidth * lvl.start.xRel;
-            robot.y = canvasLogicalHeight * lvl.start.yRel;
-            robot.angle = lvl.start.angle;
-            robot.m1 = { speed: 0, mode: 'COAST', phase: 0, currentSpeed: 0 };
-            robot.m2 = { speed: 0, mode: 'COAST', phase: 0, currentSpeed: 0 };
-            pathHistory = [{ x: robot.x, y: robot.y }];
-            touchSensorActive = false;
+      // Grid
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvasLogicalWidth; x += 20) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvasLogicalHeight); ctx.stroke();
+      }
+      for (let y = 0; y < canvasLogicalHeight; y += 20) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvasLogicalWidth, y); ctx.stroke();
+      }
 
-            runBtn.disabled = false;
-            runBtn.classList.remove('opacity-50');
-            hudTimer.textContent = '0.0s';
+      const lvl = getActiveLevel();
 
-            updateHud();
-            drawScene();
-        }
+      // Lingkaran Sasaran Finis
+      const tx = canvasLogicalWidth * lvl.target.xRel;
+      const ty = canvasLogicalHeight * lvl.target.yRel;
+      const radius = lvl.target.radius;
 
-        function clearTrail() {
-            pathHistory = [{ x: robot.x, y: robot.y }];
-            drawScene();
-        }
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
+      ctx.beginPath();
+      ctx.arc(tx, ty, radius, 0, Math.PI * 2);
+      ctx.fill();
 
-        function checkCollision() {
-            if (robot.x <= 14 || robot.x >= canvasLogicalWidth - 14 || robot.y <= 14 || robot.y >= canvasLogicalHeight - 14) return true;
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.arc(tx, ty, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
 
-            const lvl = getActiveLevel();
-            for (let obs of lvl.obstacles) {
-                const ox = canvasLogicalWidth * obs.xRel;
-                const oy = canvasLogicalHeight * obs.yRel;
-                const ow = canvasLogicalWidth * obs.wRel;
-                const oh = canvasLogicalHeight * obs.hRel;
+      ctx.fillStyle = '#6ee7b7';
+      ctx.font = 'bold 8px monospace';
+      ctx.fillText('FINIS', tx - 12, ty + 3);
 
-                if (robot.x + 12 >= ox && robot.x - 12 <= ox + ow &&
-                    robot.y + 12 >= oy && robot.y - 12 <= oy + oh) {
-                    return true;
-                }
-            }
-            return false;
-        }
+      // Rintangan
+      ctx.fillStyle = '#dc2626';
+      for (let obs of lvl.obstacles) {
+        const ox = canvasLogicalWidth * obs.xRel;
+        const oy = canvasLogicalHeight * obs.yRel;
+        const ow = canvasLogicalWidth * obs.wRel;
+        const oh = canvasLogicalHeight * obs.hRel;
 
-        function checkGoalReach() {
-            const lvl = getActiveLevel();
-            const tx = canvasLogicalWidth * lvl.target.xRel;
-            const ty = canvasLogicalHeight * lvl.target.yRel;
-            return Math.hypot(robot.x - tx, robot.y - ty) < lvl.target.radius;
-        }
+        ctx.beginPath();
+        ctx.roundRect(ox, oy, ow, oh, 3);
+        ctx.fill();
 
-        function updateHud() {
-            const m1Text = (robot.m1.mode === 'COAST') ? 'BEBAS' : (robot.m1.mode === 'BRAKE' ? 'REM' : `${robot.m1.mode} (${robot.m1.speed}%)`);
-            const m2Text = (robot.m2.mode === 'COAST') ? 'BEBAS' : (robot.m2.mode === 'BRAKE' ? 'REM' : `${robot.m2.mode} (${robot.m2.speed}%)`);
-            hudM1.textContent = m1Text;
-            hudM2.textContent = m2Text;
-            hudTouch.textContent = touchSensorActive ? '1' : '0';
-            hudTouch.className = touchSensorActive ? 'text-rose-400 font-bold animate-pulse' : 'text-slate-500';
-        }
+        ctx.fillStyle = '#fecaca';
+        ctx.font = '7px monospace';
+        ctx.fillText(obs.label || 'HALANGAN', ox + 3, oy + oh / 2 + 3);
+        ctx.fillStyle = '#dc2626';
+      }
 
-        function drawScene() {
-            ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
+      // Jejak Lintasan
+      if (pathHistory.length > 1) {
+        ctx.strokeStyle = '#0284c7';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(pathHistory[0].x, pathHistory[0].y);
+        for (let i = 1; i < pathHistory.length; i++) ctx.lineTo(pathHistory[i].x, pathHistory[i].y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
 
-            // Grid
-            ctx.strokeStyle = '#1e293b';
-            ctx.lineWidth = 1;
-            for (let x = 0; x < canvasLogicalWidth; x += 20) {
-                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvasLogicalHeight); ctx.stroke();
-            }
-            for (let y = 0; y < canvasLogicalHeight; y += 20) {
-                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvasLogicalWidth, y); ctx.stroke();
-            }
+      // Mobil Robot
+      ctx.save();
+      ctx.translate(robot.x, robot.y);
+      ctx.rotate(robot.angle);
 
-            const lvl = getActiveLevel();
+      drawWheel(0, -WHEEL_BASE / 2, robot.m1.phase, '#38bdf8');
+      drawWheel(0, WHEEL_BASE / 2, robot.m2.phase, '#2dd4bf');
 
-            // Lingkaran Sasaran Finis
-            const tx = canvasLogicalWidth * lvl.target.xRel;
-            const ty = canvasLogicalHeight * lvl.target.yRel;
-            const radius = lvl.target.radius;
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath();
+      ctx.roundRect(-14, -13, 28, 26, 3);
+      ctx.fill();
 
-            ctx.fillStyle = 'rgba(16, 185, 129, 0.2)';
-            ctx.beginPath();
-            ctx.arc(tx, ty, radius, 0, Math.PI * 2);
-            ctx.fill();
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.moveTo(14, 0);
+      ctx.lineTo(8, -5);
+      ctx.lineTo(8, 5);
+      ctx.closePath();
+      ctx.fill();
 
-            ctx.strokeStyle = '#10b981';
-            ctx.lineWidth = 2;
-            ctx.setLineDash([4, 3]);
-            ctx.beginPath();
-            ctx.arc(tx, ty, radius, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.setLineDash([]);
+      ctx.fillStyle = touchSensorActive ? '#f43f5e' : '#64748b';
+      ctx.fillRect(14, -3.5, 3, 7);
 
-            ctx.fillStyle = '#6ee7b7';
-            ctx.font = 'bold 8px monospace';
-            ctx.fillText('FINIS', tx - 12, ty + 3);
+      ctx.restore();
+    }
 
-            // Rintangan
-            ctx.fillStyle = '#dc2626';
-            for (let obs of lvl.obstacles) {
-                const ox = canvasLogicalWidth * obs.xRel;
-                const oy = canvasLogicalHeight * obs.yRel;
-                const ow = canvasLogicalWidth * obs.wRel;
-                const oh = canvasLogicalHeight * obs.hRel;
+    function drawWheel(x, y, phase, accent) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(-10, -3.5, 20, 7);
+      ctx.fillStyle = accent;
+      ctx.fillRect(-7, -2, 14, 4);
 
-                ctx.beginPath();
-                ctx.roundRect(ox, oy, ow, oh, 3);
-                ctx.fill();
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 1;
+      const offset = (phase % 6);
+      for (let tx = -8 + offset; tx <= 9; tx += 6) {
+        ctx.beginPath();
+        ctx.moveTo(tx, -3.5);
+        ctx.lineTo(tx, 3.5);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
 
-                ctx.fillStyle = '#fecaca';
-                ctx.font = '7px monospace';
-                ctx.fillText(obs.label || 'HALANGAN', ox + 3, oy + oh / 2 + 3);
-                ctx.fillStyle = '#dc2626';
-            }
+    function stepPhysics(dt) {
+      let target1 = 0, target2 = 0;
 
-            // Jejak Lintasan
-            if (pathHistory.length > 1) {
-                ctx.strokeStyle = '#0284c7';
-                ctx.lineWidth = 1.5;
-                ctx.setLineDash([3, 3]);
-                ctx.beginPath();
-                ctx.moveTo(pathHistory[0].x, pathHistory[0].y);
-                for (let i = 1; i < pathHistory.length; i++) ctx.lineTo(pathHistory[i].x, pathHistory[i].y);
-                ctx.stroke();
-                ctx.setLineDash([]);
-            }
+      if (robot.m1.speed > 0) {
+        if (robot.m1.mode === 'CW') target1 = robot.m1.speed;
+        else if (robot.m1.mode === 'CCW') target1 = -robot.m1.speed;
+      }
 
-            // Mobil Robot
-            ctx.save();
-            ctx.translate(robot.x, robot.y);
-            ctx.rotate(robot.angle);
+      if (robot.m2.speed > 0) {
+        if (robot.m2.mode === 'CW') target2 = robot.m2.speed;
+        else if (robot.m2.mode === 'CCW') target2 = -robot.m2.speed;
+      }
 
-            drawWheel(0, -WHEEL_BASE / 2, robot.m1.phase, '#38bdf8');
-            drawWheel(0, WHEEL_BASE / 2, robot.m2.phase, '#2dd4bf');
+      const accelRate = 500 * dt;
+      robot.m1.currentSpeed += Math.max(-accelRate, Math.min(accelRate, target1 - robot.m1.currentSpeed));
+      robot.m2.currentSpeed += Math.max(-accelRate, Math.min(accelRate, target2 - robot.m2.currentSpeed));
 
-            ctx.fillStyle = '#0284c7';
-            ctx.beginPath();
-            ctx.roundRect(-14, -13, 28, 26, 3);
-            ctx.fill();
+      const vLeft = (robot.m1.currentSpeed / 100) * MAX_LINEAR_SPEED;
+      const vRight = (robot.m2.currentSpeed / 100) * MAX_LINEAR_SPEED;
 
-            ctx.fillStyle = '#f59e0b';
-            ctx.beginPath();
-            ctx.moveTo(14, 0);
-            ctx.lineTo(8, -5);
-            ctx.lineTo(8, 5);
-            ctx.closePath();
-            ctx.fill();
+      const vLinear = (vLeft + vRight) / 2;
+      const omega = ((vRight - vLeft) / WHEEL_BASE) * TURN_RATE;
 
-            ctx.fillStyle = touchSensorActive ? '#f43f5e' : '#64748b';
-            ctx.fillRect(14, -3.5, 3, 7);
+      robot.angle += omega * dt;
+      robot.x += Math.cos(robot.angle) * vLinear * dt;
+      robot.y += Math.sin(robot.angle) * vLinear * dt;
 
-            ctx.restore();
-        }
+      robot.m1.phase += (vLeft * dt * 0.4);
+      robot.m2.phase += (vRight * dt * 0.4);
 
-        function drawWheel(x, y, phase, accent) {
-            ctx.save();
-            ctx.translate(x, y);
-            ctx.fillStyle = '#020617';
-            ctx.fillRect(-10, -3.5, 20, 7);
-            ctx.fillStyle = accent;
-            ctx.fillRect(-7, -2, 14, 4);
+      robot.x = Math.max(14, Math.min(canvasLogicalWidth - 14, robot.x));
+      robot.y = Math.max(14, Math.min(canvasLogicalHeight - 14, robot.y));
 
-            ctx.strokeStyle = '#94a3b8';
-            ctx.lineWidth = 1;
-            const offset = (phase % 6);
-            for (let tx = -8 + offset; tx <= 9; tx += 6) {
-                ctx.beginPath();
-                ctx.moveTo(tx, -3.5);
-                ctx.lineTo(tx, 3.5);
-                ctx.stroke();
-            }
-            ctx.restore();
-        }
+      touchSensorActive = checkCollision();
 
-        // Kinematika Terkalibrasi & Stabil
-        function stepPhysics(dt) {
-            let target1 = 0, target2 = 0;
+      const lastPoint = pathHistory[pathHistory.length - 1];
+      if (Math.hypot(robot.x - lastPoint.x, robot.y - lastPoint.y) > 4) {
+        pathHistory.push({ x: robot.x, y: robot.y });
+      }
 
-            if (robot.m1.speed > 0) {
-                if (robot.m1.mode === 'CW') target1 = robot.m1.speed;
-                else if (robot.m1.mode === 'CCW') target1 = -robot.m1.speed;
-            }
+      updateHud();
+      drawScene();
 
-            if (robot.m2.speed > 0) {
-                if (robot.m2.mode === 'CW') target2 = robot.m2.speed;
-                else if (robot.m2.mode === 'CCW') target2 = -robot.m2.speed;
-            }
+      if (isRunning && checkGoalReach()) {
+        onMissionSuccess();
+      }
+    }
 
-            const accelRate = 500 * dt;
-            robot.m1.currentSpeed += Math.max(-accelRate, Math.min(accelRate, target1 - robot.m1.currentSpeed));
-            robot.m2.currentSpeed += Math.max(-accelRate, Math.min(accelRate, target2 - robot.m2.currentSpeed));
+    async function executeAst(nodes, execId) {
+      for (const node of nodes) {
+        if (!isRunning || execId !== currentExecutionId) return;
 
-            const vLeft = (robot.m1.currentSpeed / 100) * MAX_LINEAR_SPEED;
-            const vRight = (robot.m2.currentSpeed / 100) * MAX_LINEAR_SPEED;
+        switch(node.type) {
+          case 'M1_SPEED_100': robot.m1.speed = 100; updateHud(); break;
+          case 'M1_CW': robot.m1.mode = 'CW'; updateHud(); break;
+          case 'M1_CCW': robot.m1.mode = 'CCW'; updateHud(); break;
+          case 'M1_BRAKE': robot.m1.mode = 'BRAKE'; robot.m1.speed = 0; updateHud(); break;
+          case 'M1_COAST': robot.m1.mode = 'COAST'; robot.m1.speed = 0; updateHud(); break;
 
-            const vLinear = (vLeft + vRight) / 2;
-            const omega = ((vRight - vLeft) / WHEEL_BASE) * TURN_RATE;
+          case 'M2_SPEED_100': robot.m2.speed = 100; updateHud(); break;
+          case 'M2_CW': robot.m2.mode = 'CW'; updateHud(); break;
+          case 'M2_CCW': robot.m2.mode = 'CCW'; updateHud(); break;
+          case 'M2_BRAKE': robot.m2.mode = 'BRAKE'; robot.m2.speed = 0; updateHud(); break;
+          case 'M2_COAST': robot.m2.mode = 'COAST'; robot.m2.speed = 0; updateHud(); break;
 
-            robot.angle += omega * dt;
-            robot.x += Math.cos(robot.angle) * vLinear * dt;
-            robot.y += Math.sin(robot.angle) * vLinear * dt;
-
-            robot.m1.phase += (vLeft * dt * 0.4);
-            robot.m2.phase += (vRight * dt * 0.4);
-
-            robot.x = Math.max(14, Math.min(canvasLogicalWidth - 14, robot.x));
-            robot.y = Math.max(14, Math.min(canvasLogicalHeight - 14, robot.y));
-
-            touchSensorActive = checkCollision();
-
-            const lastPoint = pathHistory[pathHistory.length - 1];
-            if (Math.hypot(robot.x - lastPoint.x, robot.y - lastPoint.y) > 4) {
-                pathHistory.push({ x: robot.x, y: robot.y });
-            }
-
-            updateHud();
-            drawScene();
-
-            if (isRunning && checkGoalReach()) {
-                onMissionSuccess();
-            }
-        }
-
-        async function executeAst(nodes, execId) {
-            for (const node of nodes) {
-                if (!isRunning || execId !== currentExecutionId) return;
-
-                switch (node.type) {
-                    case 'M1_SPEED_100': robot.m1.speed = 100; updateHud(); break;
-                    case 'M1_CW': robot.m1.mode = 'CW'; updateHud(); break;
-                    case 'M1_CCW': robot.m1.mode = 'CCW'; updateHud(); break;
-                    case 'M1_BRAKE': robot.m1.mode = 'BRAKE'; robot.m1.speed = 0; updateHud(); break;
-                    case 'M1_COAST': robot.m1.mode = 'COAST'; robot.m1.speed = 0; updateHud(); break;
-
-                    case 'M2_SPEED_100': robot.m2.speed = 100; updateHud(); break;
-                    case 'M2_CW': robot.m2.mode = 'CW'; updateHud(); break;
-                    case 'M2_CCW': robot.m2.mode = 'CCW'; updateHud(); break;
-                    case 'M2_BRAKE': robot.m2.mode = 'BRAKE'; robot.m2.speed = 0; updateHud(); break;
-                    case 'M2_COAST': robot.m2.mode = 'COAST'; robot.m2.speed = 0; updateHud(); break;
-
-                    case 'WAIT':
-                        const durationMs = (node.value || 1.0) * 1000;
-                        const start = performance.now();
-                        while (isRunning && execId === currentExecutionId && (performance.now() - start < durationMs)) {
-                            if (touchSensorActive && getActiveLevel().id !== 5) {
-                                triggerCrash("Mobil menabrak pembatas rintangan!");
-                                return;
-                            }
-                            await new Promise(r => setTimeout(r, 16));
-                        }
-                        break;
-
-                    case 'REPEAT_4':
-                        for (let c = 0; c < 4; c++) {
-                            if (!isRunning || execId !== currentExecutionId) break;
-                            await executeAst(node.children || [], execId);
-                        }
-                        break;
-
-                    case 'FOREVER':
-                        let count = 0;
-                        while (isRunning && count < 200 && execId === currentExecutionId) {
-                            await executeAst(node.children || [], execId);
-                            count++;
-                            await new Promise(r => setTimeout(r, 16));
-                        }
-                        break;
-
-                    case 'IF_TOUCH':
-                        if (touchSensorActive) {
-                            await executeAst(node.children || [], execId);
-                        }
-                        break;
-                }
-            }
-        }
-
-        function triggerCrash(reason) {
-            isRunning = false;
-            currentExecutionId++;
-            if (animFrame) cancelAnimationFrame(animFrame);
-            runBtn.disabled = false;
-            runBtn.classList.remove('opacity-50');
-
-            document.getElementById('crashReason').textContent = reason;
-            crashModal.classList.remove('hidden');
-        }
-
-        function onMissionSuccess() {
-            isRunning = false;
-            currentExecutionId++;
-            if (animFrame) cancelAnimationFrame(animFrame);
-
-            runBtn.disabled = false;
-            runBtn.classList.remove('opacity-50');
-
-            const totalTime = (performance.now() - missionStartTime) / 1000;
-            const lvl = getActiveLevel();
-            let stars = "⭐";
-            if (totalTime <= lvl.starsRule.threeStarsSec) stars = "⭐⭐⭐";
-            else if (totalTime <= lvl.starsRule.twoStarsSec) stars = "⭐⭐";
-
-            winStars.textContent = stars;
-            starDisplay.textContent = stars;
-            document.getElementById('winSubtitle').textContent = `Berhasil mencapai sasaran dalam ${totalTime.toFixed(1)} detik!`;
-            winModal.classList.remove('hidden');
-        }
-
-        function mainPhysicsLoop(now) {
-            if (!isRunning) return;
-            if (!lastPhysicsTime) lastPhysicsTime = now;
-            const dt = Math.min((now - lastPhysicsTime) / 1000, 0.05);
-            lastPhysicsTime = now;
-
-            const elapsedSec = ((now - missionStartTime) / 1000).toFixed(1);
-            hudTimer.textContent = `${elapsedSec}s`;
-
-            stepPhysics(dt);
-
-            if (touchSensorActive && getActiveLevel().id !== 5) {
-                triggerCrash("Mobil menabrak dinding sebelum mencapai sasaran!");
+          case 'WAIT':
+            const durationMs = (node.value || 1.0) * 1000;
+            const start = performance.now();
+            while (isRunning && execId === currentExecutionId && (performance.now() - start < durationMs)) {
+              if (touchSensorActive && getActiveLevel().id !== 6) {
+                triggerCrash("Mobil menabrak pembatas rintangan!");
                 return;
+              }
+              await new Promise(r => setTimeout(r, 16));
             }
+            break;
 
-            animFrame = requestAnimationFrame(mainPhysicsLoop);
-        }
-
-        async function runSimulation() {
-            if (programTree.length === 0) {
-                alert('Tarik atau masukkan blok perintah terlebih dahulu.');
-                return;
+          case 'REPEAT_4':
+            for (let c = 0; c < 4; c++) {
+              if (!isRunning || execId !== currentExecutionId) break;
+              await executeAst(node.children || [], execId);
             }
+            break;
 
-            stopAndReset();
-
-            isRunning = true;
-            const thisExecId = ++currentExecutionId;
-            runBtn.disabled = true;
-            runBtn.classList.add('opacity-50');
-
-            missionStartTime = performance.now();
-            lastPhysicsTime = missionStartTime;
-            animFrame = requestAnimationFrame(mainPhysicsLoop);
-
-            await executeAst(programTree, thisExecId);
-
-            const isMotorActive = (robot.m1.speed > 0 && robot.m1.mode !== 'STOP' && robot.m1.mode !== 'BRAKE' && robot.m1.mode !== 'COAST') ||
-                (robot.m2.speed > 0 && robot.m2.mode !== 'STOP' && robot.m2.mode !== 'BRAKE' && robot.m2.mode !== 'COAST');
-
-            if (!isMotorActive && isRunning) {
-                runBtn.disabled = false;
-                runBtn.classList.remove('opacity-50');
-                isRunning = false;
-                if (animFrame) cancelAnimationFrame(animFrame);
-                if (!checkGoalReach()) {
-                    alert('Mobil berhenti sebelum mencapai sasaran. Sesuaikan arah atau jangan rem motor terlalu cepat!');
-                }
+          case 'FOREVER':
+            let count = 0;
+            while (isRunning && count < 200 && execId === currentExecutionId) {
+              await executeAst(node.children || [], execId);
+              count++;
+              await new Promise(r => setTimeout(r, 16));
             }
-        }
+            break;
 
-        function openTutorial() { document.getElementById('tutorialModal').classList.remove('hidden'); }
-        function closeTutorial() { document.getElementById('tutorialModal').classList.add('hidden'); }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+          case 'IF_TOUCH':
+            if (touchSensorActive) {
+              await executeAst(node.children || [], execId);
+            }
+            break;
         }
-    </script>
+      }
+    }
+
+    function triggerCrash(reason) {
+      isRunning = false;
+      currentExecutionId++;
+      if (animFrame) cancelAnimationFrame(animFrame);
+      runBtn.disabled = false;
+      runBtn.classList.remove('opacity-50');
+
+      document.getElementById('crashReason').textContent = reason;
+      crashModal.classList.remove('hidden');
+    }
+
+    function onMissionSuccess() {
+      isRunning = false;
+      currentExecutionId++;
+      if (animFrame) cancelAnimationFrame(animFrame);
+
+      runBtn.disabled = false;
+      runBtn.classList.remove('opacity-50');
+
+      const totalTime = Number(((performance.now() - missionStartTime) / 1000).toFixed(1));
+      const lvl = getActiveLevel();
+      let stars = "⭐";
+      if (totalTime <= lvl.starsRule.threeStarsSec) stars = "⭐⭐⭐";
+      else if (totalTime <= lvl.starsRule.twoStarsSec) stars = "⭐⭐";
+
+      winStars.textContent = stars;
+      starDisplay.textContent = stars;
+      document.getElementById('winSubtitle').textContent = `Berhasil mencapai sasaran dalam ${totalTime} detik!`;
+      winModal.classList.remove('hidden');
+
+      // Simpan progress lokal
+      userProgress.starsPerLevel[activeLevelIndex] = stars;
+      if (activeLevelIndex + 1 > userProgress.highestUnlocked && activeLevelIndex + 1 < getLevelList().length) {
+        userProgress.highestUnlocked = activeLevelIndex + 1;
+      }
+      saveUserProgress();
+
+      // Kirim hasil ke Google Sheets tracker
+      logProgressToSheets(lvl.id, stars, totalTime, programTree);
+    }
+
+    function mainPhysicsLoop(now) {
+      if (!isRunning) return;
+      if (!lastPhysicsTime) lastPhysicsTime = now;
+      const dt = Math.min((now - lastPhysicsTime) / 1000, 0.05);
+      lastPhysicsTime = now;
+
+      const elapsedSec = ((now - missionStartTime) / 1000).toFixed(1);
+      hudTimer.textContent = `${elapsedSec}s`;
+
+      stepPhysics(dt);
+
+      if (touchSensorActive && getActiveLevel().id !== 6) {
+        triggerCrash("Mobil menabrak dinding sebelum mencapai sasaran!");
+        return;
+      }
+
+      animFrame = requestAnimationFrame(mainPhysicsLoop);
+    }
+
+    async function runSimulation() {
+      if (programTree.length === 0) {
+        alert('Tarik atau masukkan blok perintah terlebih dahulu.');
+        return;
+      }
+
+      stopAndReset();
+      
+      isRunning = true;
+      const thisExecId = ++currentExecutionId;
+      runBtn.disabled = true;
+      runBtn.classList.add('opacity-50');
+
+      missionStartTime = performance.now();
+      lastPhysicsTime = missionStartTime;
+      animFrame = requestAnimationFrame(mainPhysicsLoop);
+
+      await executeAst(programTree, thisExecId);
+
+      const isMotorActive = (robot.m1.speed > 0 && robot.m1.mode !== 'STOP' && robot.m1.mode !== 'BRAKE' && robot.m1.mode !== 'COAST') ||
+                            (robot.m2.speed > 0 && robot.m2.mode !== 'STOP' && robot.m2.mode !== 'BRAKE' && robot.m2.mode !== 'COAST');
+
+      if (!isMotorActive && isRunning) {
+        runBtn.disabled = false;
+        runBtn.classList.remove('opacity-50');
+        isRunning = false;
+        if (animFrame) cancelAnimationFrame(animFrame);
+        if (!checkGoalReach()) {
+          alert('Mobil berhenti sebelum mencapai sasaran. Sesuaikan arah atau jangan rem motor terlalu cepat!');
+        }
+      }
+    }
+
+    function openTutorial() { document.getElementById('tutorialModal').classList.remove('hidden'); }
+    function closeTutorial() { document.getElementById('tutorialModal').classList.add('hidden'); }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
 </body>
-
 </html>
