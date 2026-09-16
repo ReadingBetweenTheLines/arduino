@@ -42,17 +42,25 @@
   <!-- Header Sandbox & Navigasi Misi -->
   <header class="flex items-center justify-between pb-1 border-b border-slate-800">
     <div class="flex items-center gap-1.5">
-      <span class="text-sm">🧪</span>
+      <span class="text-sm">🎮</span>
       <div>
-        <h1 class="text-xs font-bold text-amber-400">Lab Latihan Bebas</h1>
-        <div class="text-[9px] text-slate-400 font-mono">Eksperimen &amp; Kalibrasi Robot</div>
+        <h1 class="text-xs font-bold text-sky-400">Ekspedisi Studuino</h1>
+        <div id="stageTracker" class="text-[9px] text-slate-400 font-mono">Level 1 / 10</div>
       </div>
     </div>
     <div class="flex items-center gap-1">
-      <a href="index.html" class="bg-emerald-600 active:bg-emerald-500 text-white px-2.5 py-1 rounded-full text-[10px] font-mono font-bold shadow flex items-center gap-1">
-        <span>🏁</span> Ke Misi
+      <!-- Tombol Pintasan ke Mode Latihan Bebas -->
+      <a href="sandbox.html" class="bg-amber-600 active:bg-amber-500 text-slate-950 px-2 py-1 rounded-full text-[10px] font-mono font-bold shadow flex items-center gap-1">
+        <span>🧪</span> Latihan
       </a>
-      <button onclick="openTutorial()" class="bg-indigo-600 active:bg-indigo-500 text-white px-2 py-1 rounded-full text-[10px] font-medium shadow">
+      <!-- Tombol Peta Level -->
+      <button onclick="toggleLevelSelectModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded-full text-[10px] font-mono font-bold border border-slate-700 flex items-center gap-1">
+        <span>🗺️</span> Level
+      </button>
+      <div id="starDisplay" class="bg-slate-900 border border-slate-700 px-2 py-0.5 rounded-full text-[10px] text-amber-400 font-mono font-bold">
+        ⭐⭐⭐
+      </div>
+      <button onclick="openTutorial()" class="bg-indigo-600 active:bg-indigo-500 text-white px-2 py-0.5 rounded-full text-[9px] font-medium shadow">
         Buku Trik
       </button>
     </div>

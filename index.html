@@ -40,24 +40,30 @@
 
   <div id="touchGhost" class="px-2.5 py-1.5 rounded-lg border border-sky-400 bg-sky-950/95 text-sky-200 text-[10px] font-mono shadow-2xl"></div>
 
-  <!-- Header Skor & Level -->
+  <!-- Header Skor, Navigasi Sandbox, & Level -->
   <header class="flex items-center justify-between pb-1 border-b border-slate-800">
     <div class="flex items-center gap-1.5">
       <span class="text-sm">🎮</span>
       <div>
-        <h1 class="text-xs font-bold text-sky-400">Ekspedisi Studuino</h1>
+        <h1 class="text-xs font-bold text-sky-400 leading-tight">Ekspedisi Studuino</h1>
         <div id="stageTracker" class="text-[9px] text-slate-400 font-mono">Level 1 / 10</div>
       </div>
     </div>
+    
     <div class="flex items-center gap-1">
-      <button onclick="toggleLevelSelectModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded-full text-[10px] font-mono font-bold border border-slate-700 flex items-center gap-1">
+      <!-- Tombol Pindah ke Mode Latihan Sandbox -->
+      <a href="sandbox.html" class="bg-amber-500 hover:bg-amber-400 text-slate-950 px-2 py-1 rounded-lg text-[9px] font-mono font-bold shadow flex items-center gap-1 transition">
+        <span>🧪</span> Latihan
+      </a>
+      <!-- Tombol Peta Level -->
+      <button onclick="toggleLevelSelectModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded-lg text-[9px] font-mono font-bold border border-slate-700 flex items-center gap-1 transition">
         <span>🗺️</span> Level
       </button>
-      <div id="starDisplay" class="bg-slate-900 border border-slate-700 px-2 py-0.5 rounded-full text-[10px] text-amber-400 font-mono font-bold">
+      <div id="starDisplay" class="bg-slate-900 border border-slate-700 px-1.5 py-1 rounded-lg text-[9px] text-amber-400 font-mono font-bold">
         ⭐⭐⭐
       </div>
-      <button onclick="openTutorial()" class="bg-indigo-600 active:bg-indigo-500 text-white px-2 py-0.5 rounded-full text-[9px] font-medium shadow">
-        Buku Trik
+      <button onclick="openTutorial()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-2 py-1 rounded-lg text-[9px] font-medium shadow transition">
+        Panduan
       </button>
     </div>
   </header>
@@ -199,12 +205,12 @@
         <button onclick="closeTutorial()" class="text-slate-400 font-bold text-sm px-2 py-0.5 rounded bg-slate-800">✕</button>
       </div>
       <div class="text-[10px] text-slate-300 leading-relaxed font-mono space-y-1.5">
-        <p>• <b>Maju Lurus:</b> Set <span class="text-sky-300">M1 PUTAR (CW)</span> dan <span class="text-teal-300">M2 PUTAR (CW)</span>[cite: 2].</p>
+        <p>• <b>Maju Lurus:</b> Set <span class="text-sky-300">M1 PUTAR (CW)</span> dan <span class="text-teal-300">M2 PUTAR (CW)</span>.</p>
         <p>• <b>Belok 90° Stabil:</b>
           <br>- <b>Putar di Tempat:</b> M1 CW &amp; M2 CCW dengan TUNGGU sekitar <b>0.7s - 0.8s</b>.
           <br>- <b>Belok Poros (Pivot):</b> Jalankan satu motor saja, rem motor lainnya dengan TUNGGU sekitar <b>1.2s - 1.4s</b>.
         </p>
-        <p>• <b>Meluncur Bebas:</b> Motor terus melaju sampai dihentikan blok REM/BEBAS atau menyentuh sasaran[cite: 2].</p>
+        <p>• <b>Meluncur Bebas:</b> Motor terus melaju sampai dihentikan blok REM/BEBAS atau menyentuh sasaran.</p>
       </div>
       <button onclick="closeTutorial()" class="w-full py-2 bg-sky-600 active:bg-sky-500 text-slate-950 font-bold rounded-xl text-xs transition">
         Saya Mengerti
@@ -234,7 +240,6 @@
     // ============================================================
     // GOOGLE APPS SCRIPT WEB APP INTEGRATION (TRACKER)
     // ============================================================
-    // Masukkan URL Deployment Google Apps Script Anda di sini:
     const APPS_SCRIPT_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbykzG5CrJHiaXozizcMCSInRi_4vT0XhYse1XaFIEn829BrQCX36jpLkZyd-3vEN7WT/exec";
 
     function saveStudentName(name) {
