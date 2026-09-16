@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Lab Latihan Bebas Studuino</title>
+  <title>Lab Latihan Bebas Studuino - Mode Diagnostik Roda</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     html, body {
@@ -15,7 +15,6 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-    /* Drop Indicators */
     .drop-indicator-top { border-top: 3px solid #38bdf8 !important; box-shadow: 0 -3px 6px rgba(56, 189, 248, 0.5); }
     .drop-indicator-bottom { border-bottom: 3px solid #38bdf8 !important; box-shadow: 0 3px 6px rgba(56, 189, 248, 0.5); }
     .drop-indicator-inside { background-color: rgba(56, 189, 248, 0.15) !important; border: 2px dashed #38bdf8 !important; }
@@ -39,59 +38,79 @@
 
   <div id="touchGhost" class="px-2.5 py-1.5 rounded-lg border border-sky-400 bg-sky-950/95 text-sky-200 text-[10px] font-mono shadow-2xl"></div>
 
-  <!-- Header Sandbox & Navigasi Misi -->
-  <header class="flex items-center justify-between pb-1 border-b border-slate-800">
-    <div class="flex items-center gap-1.5">
-      <span class="text-sm">🎮</span>
-      <div>
-        <h1 class="text-xs font-bold text-sky-400">Ekspedisi Studuino</h1>
-        <div id="stageTracker" class="text-[9px] text-slate-400 font-mono">Level 1 / 10</div>
+  <!-- Header Navigasi -->
+  <header class="flex items-center justify-between pb-1.5 border-b border-slate-800 gap-1">
+    <div class="flex items-center gap-1.5 min-w-0">
+      <span class="text-sm flex-shrink-0">🧪</span>
+      <div class="truncate">
+        <h1 class="text-xs font-bold text-amber-400 leading-tight truncate">Lab Latihan &amp; Kalibrasi</h1>
+        <div class="text-[9px] text-slate-400 font-mono">Diagnostik Roda Individual</div>
       </div>
     </div>
-    <div class="flex items-center gap-1">
-      <!-- Tombol Pintasan ke Mode Latihan Bebas -->
-      <a href="sandbox.html" class="bg-amber-600 active:bg-amber-500 text-slate-950 px-2 py-1 rounded-full text-[10px] font-mono font-bold shadow flex items-center gap-1">
-        <span>🧪</span> Latihan
-      </a>
-      <!-- Tombol Peta Level -->
-      <button onclick="toggleLevelSelectModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2 py-1 rounded-full text-[10px] font-mono font-bold border border-slate-700 flex items-center gap-1">
-        <span>🗺️</span> Level
+    
+    <div class="flex items-center gap-1.5 flex-shrink-0">
+      <button 
+        type="button" 
+        onclick="returnToMission()" 
+        class="bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 text-slate-950 px-3 py-1.5 rounded-lg text-[10px] font-mono font-extrabold shadow flex items-center gap-1 transition cursor-pointer">
+        <span>🏁</span> Ke Misi
       </button>
-      <div id="starDisplay" class="bg-slate-900 border border-slate-700 px-2 py-0.5 rounded-full text-[10px] text-amber-400 font-mono font-bold">
-        ⭐⭐⭐
-      </div>
-      <button onclick="openTutorial()" class="bg-indigo-600 active:bg-indigo-500 text-white px-2 py-0.5 rounded-full text-[9px] font-medium shadow">
-        Buku Trik
+      <button type="button" onclick="openTutorial()" class="bg-indigo-600 active:bg-indigo-500 text-white px-2 py-1.5 rounded-lg text-[10px] font-medium shadow">
+        Panduan
       </button>
     </div>
   </header>
 
-  <!-- Panggung Arena Eksperimen -->
-  <div class="relative w-full aspect-[4/3] min-h-[290px] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner">
+  <!-- PANEL DIAGNOSTIK VISUAL RODA TAMPIS ATAS (CLOSE-UP HIGH VIEW) -->
+  <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 flex flex-col gap-1.5 shadow-inner">
+    <div class="flex justify-between items-center text-[10px] font-mono border-b border-slate-800/80 pb-1">
+      <span class="text-slate-400 uppercase tracking-wider font-semibold">🔍 Visual Zoom Roda Individual</span>
+      <span class="text-amber-400 font-bold">Respon Perintah Motor</span>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2">
+      <!-- Roda Kiri (M1) Close-Up -->
+      <div class="bg-slate-950/80 border border-sky-900/50 rounded-lg p-2 flex flex-col items-center relative">
+        <div class="text-[9px] font-mono text-sky-400 font-bold flex justify-between w-full mb-1">
+          <span>RODA M1 (KIRI)</span>
+          <span id="m1StatusTag" class="text-slate-500">MATI</span>
+        </div>
+        <canvas id="wheelCanvasM1" width="120" height="70" class="block rounded bg-slate-900/60 border border-slate-800/60"></canvas>
+        <div id="m1DetailSub" class="text-[8px] font-mono text-slate-400 mt-1 text-center">Daya: 0% | Mode: COAST</div>
+      </div>
+
+      <!-- Roda Kanan (M2) Close-Up -->
+      <div class="bg-slate-950/80 border border-teal-900/50 rounded-lg p-2 flex flex-col items-center relative">
+        <div class="text-[9px] font-mono text-teal-400 font-bold flex justify-between w-full mb-1">
+          <span>RODA M2 (KANAN)</span>
+          <span id="m2StatusTag" class="text-slate-500">MATI</span>
+        </div>
+        <canvas id="wheelCanvasM2" width="120" height="70" class="block rounded bg-slate-900/60 border border-slate-800/60"></canvas>
+        <div id="m2DetailSub" class="text-[8px] font-mono text-slate-400 mt-1 text-center">Daya: 0% | Mode: COAST</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panggung Arena Lintas (Kanvas Mobil) -->
+  <div class="relative w-full aspect-[4/3] min-h-[250px] rounded-xl overflow-hidden border border-slate-800 bg-slate-900 shadow-inner">
     <canvas id="simCanvas" class="w-full h-full block cursor-crosshair"></canvas>
     
     <!-- HUD Info Telemetri -->
     <div class="absolute top-1.5 left-1.5 bg-slate-950/90 backdrop-blur-sm border border-slate-800 rounded px-1.5 py-0.5 text-[8px] font-mono text-slate-300 flex gap-2">
-      <div>M1 (Kiri): <span id="hudM1" class="text-sky-400 font-bold">MATI</span></div>
-      <div>M2 (Kanan): <span id="hudM2" class="text-teal-400 font-bold">MATI</span></div>
       <div>SENSOR: <span id="hudTouch" class="text-slate-500 font-bold">0</span></div>
-      <div>ARAH: <span id="hudHdg" class="text-amber-400 font-bold">0°</span></div>
+      <div>ARAH HALUAN: <span id="hudHdg" class="text-amber-400 font-bold">0°</span></div>
+      <div>WAKTU: <span id="hudTimer" class="text-sky-300 font-bold">0.0s</span></div>
     </div>
 
     <!-- Tombol Kontrol Cepat Arena -->
     <div class="absolute bottom-1.5 right-1.5 flex gap-1 z-10">
-      <button onclick="toggleObstacle()" id="btnToggleObs" class="bg-slate-900/80 active:bg-slate-800 text-amber-300 border border-slate-700 px-1.5 py-0.5 rounded text-[8px]">Halangan: ON</button>
-      <button onclick="clearTrail()" class="bg-slate-900/80 active:bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded text-[8px]">Hapus Jejak</button>
-      <button onclick="stopAndReset()" class="bg-rose-950/80 active:bg-rose-900 text-rose-300 border border-rose-700/60 px-1.5 py-0.5 rounded text-[8px]">■ Reset</button>
+      <button type="button" onclick="toggleObstacle()" id="btnToggleObs" class="bg-slate-900/80 active:bg-slate-800 text-amber-300 border border-slate-700 px-1.5 py-0.5 rounded text-[8px]">Halangan: ON</button>
+      <button type="button" onclick="clearTrail()" class="bg-slate-900/80 active:bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded text-[8px]">Hapus Jejak</button>
+      <button type="button" onclick="stopAndReset()" class="bg-rose-950/80 active:bg-rose-900 text-rose-300 border border-rose-700/60 px-1.5 py-0.5 rounded text-[8px]">■ Reset</button>
     </div>
   </div>
 
-  <!-- Petunjuk Arena Bebas -->
-  <div class="text-[9px] text-slate-300 font-mono bg-slate-900/90 border border-slate-800 rounded-xl p-2 flex items-center justify-between">
-    <span>💡 <b>Tips:</b> Sentuh kanvas saat reset untuk memindahkan mobil ke titik mana saja!</span>
-  </div>
-
-  <!-- Palet Blok Horizontal Swipeable -->
+  <!-- Palet Blok Horizontal -->
   <div id="paletteBar" class="bg-slate-900/60 border border-slate-800 rounded-xl p-2 transition-colors">
     <div class="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex justify-between">
       <span>Perintah Studuino Asli</span>
@@ -99,21 +118,18 @@
     </div>
     
     <div id="paletteScrollContainer" class="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
-      <!-- M1 (Motor Kiri) -->
       <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_SPEED_100">M1 KECEPATAN (100%)</div>
       <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_CW">M1 PUTAR (CW / SEARAH)</div>
       <div class="palette-item flex-shrink-0 text-[9px] bg-sky-950 border border-sky-500/50 text-sky-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_CCW">M1 PUTAR (CCW / LAWAN)</div>
       <div class="palette-item flex-shrink-0 text-[9px] bg-rose-950 border border-rose-500/50 text-rose-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_BRAKE">M1 REM (BRAKE)</div>
       <div class="palette-item flex-shrink-0 text-[9px] bg-slate-900 border border-slate-600 text-slate-300 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M1_COAST">M1 BEBAS (COAST)</div>
 
-      <!-- M2 (Motor Kanan) -->
       <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M2_SPEED_100">M2 KECEPATAN (100%)</div>
       <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M2_CW">M2 PUTAR (CW / SEARAH)</div>
       <div class="palette-item flex-shrink-0 text-[9px] bg-teal-950 border border-teal-500/50 text-teal-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M2_CCW">M2 PUTAR (CCW / LAWAN)</div>
       <div class="palette-item flex-shrink-0 text-[9px] bg-rose-950 border border-rose-500/50 text-rose-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M2_BRAKE">M2 REM (BRAKE)</div>
       <div class="palette-item flex-shrink-0 text-[9px] bg-slate-900 border border-slate-600 text-slate-300 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="M2_COAST">M2 BEBAS (COAST)</div>
 
-      <!-- Kontrol & Sensor -->
       <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="WAIT">+ TUNGGU (detik)</div>
       <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="REPEAT_4">ULANGI (4 kali)</div>
       <div class="palette-item flex-shrink-0 text-[9px] bg-amber-950 border border-amber-500/50 text-amber-200 px-2 py-1 rounded font-mono active:scale-95 cursor-grab select-none" data-type="FOREVER">SELAMANYA (Loop)</div>
@@ -125,16 +141,16 @@
   <div id="workspaceContainer" class="bg-slate-900/80 border border-slate-800 rounded-xl p-2 shadow-inner transition-all">
     <div class="flex justify-between items-center mb-2">
       <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">Papan Percobaan Kode</span>
-      <button onclick="clearWorkspace()" class="px-2.5 py-1 bg-slate-800 active:bg-slate-700 text-slate-300 text-[10px] rounded">Kosongkan</button>
+      <button type="button" onclick="clearWorkspace()" class="px-2.5 py-1 bg-slate-800 active:bg-slate-700 text-slate-300 text-[10px] rounded">Kosongkan</button>
     </div>
 
     <!-- Container Daftar Blok -->
     <div id="mainDropZone" class="flex flex-col gap-1.5 min-h-[120px]"></div>
   </div>
 
-  <!-- Tombol Eksekusi Utama -->
+  <!-- Tombol Eksekusi -->
   <div class="pt-1 pb-4">
-    <button id="runBtn" onclick="runSimulation()" class="w-full py-3.5 bg-amber-500 active:bg-amber-400 text-slate-950 font-extrabold rounded-xl text-xs transition shadow-lg shadow-amber-950/50 flex items-center justify-center gap-2">
+    <button type="button" id="runBtn" onclick="runSimulation()" class="w-full py-3.5 bg-amber-500 active:bg-amber-400 text-slate-950 font-extrabold rounded-xl text-xs transition shadow-lg shadow-amber-950/50 flex items-center justify-center gap-2">
       <span class="text-sm">▶</span> UJI COBA KODE
     </button>
   </div>
@@ -143,15 +159,15 @@
   <div id="tutorialModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm p-3 hidden flex items-center justify-center overflow-y-auto">
     <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full p-4 shadow-2xl flex flex-col gap-2.5 my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-        <h2 class="text-sm font-bold text-sky-400 flex items-center gap-1"><span>💡</span> Buku Panduan Latihan</h2>
-        <button onclick="closeTutorial()" class="text-slate-400 font-bold text-sm px-2 py-0.5 rounded bg-slate-800">✕</button>
+        <h2 class="text-sm font-bold text-sky-400 flex items-center gap-1"><span>💡</span> Panduan Lab Latihan</h2>
+        <button type="button" onclick="closeTutorial()" class="text-slate-400 font-bold text-sm px-2 py-0.5 rounded bg-slate-800">✕</button>
       </div>
       <div class="text-[10px] text-slate-300 leading-relaxed font-mono space-y-1.5">
-        <p>• <b>Latihan Belok:</b> Coba ubah nilai angka pada blok <b>TUNGGU</b> untuk melihat berapa derajat mobil berbelok.</p>
-        <p>• <b>Latihan Sensor:</b> Dekatkan mobil ke kotak merah untuk menguji bagaimana blok <b>JIKA [SENTUH] DITEKAN</b> bekerja.</p>
-        <p>• <b>Pindah Posisi:</b> Ketuk di mana saja di area kanvas untuk menempatkan mobil di posisi baru sebelum menekan tombol uji coba.</p>
+        <p>• <b>Visual Roda:</b> Perhatikan kotak zoom roda di bagian atas. Panah berputar dan gerak garis ban memperlihatkan perintah motor yang sedang aktif.</p>
+        <p>• <b>Uji Belok 90°:</b> Atur arah berlawanan (M1 CW dan M2 CCW) dengan TUNGGU ~0.75 detik untuk melihat haluan berputar tepat 90 derajat.</p>
+        <p>• <b>Uji Sensor:</b> Jalankan mobil ke arah balok halangan merah untuk mencoba kondisi JIKA [SENTUH] DITEKAN.</p>
       </div>
-      <button onclick="closeTutorial()" class="w-full py-2 bg-sky-600 active:bg-sky-500 text-slate-950 font-bold rounded-xl text-xs transition">
+      <button type="button" onclick="closeTutorial()" class="w-full py-2 bg-sky-600 active:bg-sky-500 text-slate-950 font-bold rounded-xl text-xs transition">
         Saya Mengerti
       </button>
     </div>
@@ -160,15 +176,24 @@
   <script>
     const canvas = document.getElementById('simCanvas');
     const ctx = canvas.getContext('2d');
+    const canvasM1 = document.getElementById('wheelCanvasM1');
+    const ctxM1 = canvasM1.getContext('2d');
+    const canvasM2 = document.getElementById('wheelCanvasM2');
+    const ctxM2 = canvasM2.getContext('2d');
+
     const runBtn = document.getElementById('runBtn');
     const workspaceContainer = document.getElementById('workspaceContainer');
     const mainDropZone = document.getElementById('mainDropZone');
     const touchGhost = document.getElementById('touchGhost');
 
-    const hudM1 = document.getElementById('hudM1');
-    const hudM2 = document.getElementById('hudM2');
+    const m1StatusTag = document.getElementById('m1StatusTag');
+    const m2StatusTag = document.getElementById('m2StatusTag');
+    const m1DetailSub = document.getElementById('m1DetailSub');
+    const m2DetailSub = document.getElementById('m2DetailSub');
+
     const hudTouch = document.getElementById('hudTouch');
     const hudHdg = document.getElementById('hudHdg');
+    const hudTimer = document.getElementById('hudTimer');
     const btnToggleObs = document.getElementById('btnToggleObs');
 
     const WHEEL_BASE = 36;
@@ -193,8 +218,16 @@
     let isRunning = false;
     let animFrame = null;
     let lastPhysicsTime = 0;
+    let missionStartTime = 0;
     let touchSensorActive = false;
     let currentExecutionId = 0;
+
+    function returnToMission() {
+      isRunning = false;
+      currentExecutionId++;
+      if (animFrame) cancelAnimationFrame(animFrame);
+      window.location.assign('index.html');
+    }
 
     let programTree = [
       { id: 1, type: 'M1_SPEED_100', text: 'M1 KECEPATAN (100%)' },
@@ -214,7 +247,6 @@
       drawScene();
     }
 
-    // Tap-to-place spawn car saat simulasi mati
     canvas.addEventListener('pointerdown', (e) => {
       if (isRunning) return;
       const rect = canvas.getBoundingClientRect();
@@ -266,7 +298,6 @@
       }
     }
 
-    // Touch & Pointer Drag Engine
     let activeDrag = null;
     let lastDropTarget = null;
     let lastDropPos = null;
@@ -571,7 +602,7 @@
                 <input type="number" step="0.1" min="0.1" max="15" value="${node.value || 1.0}" onchange="updateWaitValue(${node.id}, this.value)" class="pointer-events-auto w-11 bg-slate-900 border border-amber-500/60 rounded px-1 py-0.5 text-center font-bold text-amber-300 text-[10px]">
                 <span>d</span>
               </div>
-              <button onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs pointer-events-auto">✕</button>
+              <button type="button" onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs pointer-events-auto">✕</button>
             `;
           } else if (spec.isContainer) {
             blockEl.className = `rounded-xl border ${spec.color} p-1 shadow-sm text-xs flex flex-col gap-1 transition-all cursor-grab active:cursor-grabbing select-none`;
@@ -581,7 +612,7 @@
                   <span class="text-amber-400 font-bold px-1 select-none text-xs">≡</span>
                   <span>📂 ${escapeHtml(node.text)}</span>
                 </div>
-                <button onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs pointer-events-auto">✕</button>
+                <button type="button" onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs pointer-events-auto">✕</button>
               </div>
               <div data-inside-slot="${node.id}" class="ml-3 pl-1.5 py-1 border-l-2 border-dashed border-amber-500/60 bg-slate-950/50 rounded-r flex flex-col gap-1 min-h-[26px] transition-all">
               </div>
@@ -596,7 +627,7 @@
                 <span class="text-slate-400 font-bold px-1 select-none text-xs">≡</span>
                 <span>${escapeHtml(node.text)}</span>
               </div>
-              <button onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs pointer-events-auto">✕</button>
+              <button type="button" onclick="deleteNode(${node.id})" class="text-slate-400 hover:text-rose-400 px-1 font-bold text-xs pointer-events-auto">✕</button>
             `;
           }
 
@@ -621,9 +652,6 @@
       buildDOM(programTree, mainDropZone);
     }
 
-    // ============================================================
-    // ARENA SIMULASI SANDBOX
-    // ============================================================
     function resizeCanvas() {
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.getBoundingClientRect();
@@ -633,6 +661,7 @@
       canvas.height = rect.height * dpr;
       ctx.scale(dpr, dpr);
       drawScene();
+      drawDiagnosticWheels();
     }
 
     function initCanvas() {
@@ -659,9 +688,11 @@
       
       runBtn.disabled = false;
       runBtn.classList.remove('opacity-50');
+      hudTimer.textContent = '0.0s';
 
       updateHud();
       drawScene();
+      drawDiagnosticWheels();
     }
 
     function clearTrail() {
@@ -687,18 +718,116 @@
     }
 
     function updateHud() {
-      const m1Text = (robot.m1.mode === 'COAST') ? 'BEBAS' : (robot.m1.mode === 'BRAKE' ? 'REM' : `${robot.m1.mode} (${robot.m1.speed}%)`);
-      const m2Text = (robot.m2.mode === 'COAST') ? 'BEBAS' : (robot.m2.mode === 'BRAKE' ? 'REM' : `${robot.m2.mode} (${robot.m2.speed}%)`);
-      hudM1.textContent = m1Text;
-      hudM2.textContent = m2Text;
       hudTouch.textContent = touchSensorActive ? '1' : '0';
       hudTouch.className = touchSensorActive ? 'text-rose-400 font-bold animate-pulse' : 'text-slate-500';
 
       let deg = Math.round(((robot.angle + Math.PI / 2) * (180 / Math.PI)) % 360);
       if (deg < 0) deg += 360;
       hudHdg.textContent = `${deg}°`;
+
+      // Update Panel Teks Diagnostik Roda
+      const formatTag = (motor) => {
+        if (motor.mode === 'COAST') return 'BEBAS';
+        if (motor.mode === 'BRAKE') return 'REM';
+        return `${motor.mode} (${motor.speed}%)`;
+      };
+
+      m1StatusTag.textContent = formatTag(robot.m1);
+      m1StatusTag.className = robot.m1.speed > 0 && (robot.m1.mode === 'CW' || robot.m1.mode === 'CCW') ? 'text-sky-300 font-bold' : 'text-slate-500';
+      m1DetailSub.textContent = `Daya: ${robot.m1.speed}% | Mode: ${robot.m1.mode}`;
+
+      m2StatusTag.textContent = formatTag(robot.m2);
+      m2StatusTag.className = robot.m2.speed > 0 && (robot.m2.mode === 'CW' || robot.m2.mode === 'CCW') ? 'text-teal-300 font-bold' : 'text-slate-500';
+      m2DetailSub.textContent = `Daya: ${robot.m2.speed}% | Mode: ${robot.m2.mode}`;
     }
 
+    // ============================================================
+    // RENDER VISUAL ZOOM RODA INDIVIDUAL (BIRD'S-EYE HIGH VIEW)
+    // ============================================================
+    function drawDiagnosticWheels() {
+      // 1. Gambar Roda M1 (Kiri)
+      renderSingleWheelDiagnostic(ctxM1, canvasM1.width, canvasM1.height, robot.m1, '#38bdf8', 'M1');
+      // 2. Gambar Roda M2 (Kanan)
+      renderSingleWheelDiagnostic(ctxM2, canvasM2.width, canvasM2.height, robot.m2, '#2dd4bf', 'M2');
+    }
+
+    function renderSingleWheelDiagnostic(cCtx, w, h, motor, accent, label) {
+      cCtx.clearRect(0, 0, w, h);
+
+      const cx = w / 2;
+      const cy = h / 2;
+
+      // Poros / Mount Tengah
+      cCtx.fillStyle = '#1e293b';
+      cCtx.fillRect(cx - 38, cy - 2, 76, 4);
+
+      // Ban Karet Luar Besar
+      cCtx.fillStyle = '#090d16';
+      cCtx.beginPath();
+      cCtx.roundRect(cx - 30, cy - 18, 60, 36, 6);
+      cCtx.fill();
+      cCtx.strokeStyle = '#334155';
+      cCtx.lineWidth = 1.5;
+      cCtx.stroke();
+
+      // Velg / Hub Motor Studuino Warna Akses
+      cCtx.fillStyle = accent;
+      cCtx.beginPath();
+      cCtx.roundRect(cx - 20, cy - 11, 40, 22, 4);
+      cCtx.fill();
+
+      // Baut Poros Roda
+      cCtx.fillStyle = '#020617';
+      cCtx.beginPath();
+      cCtx.arc(cx, cy, 4, 0, Math.PI * 2);
+      cCtx.fill();
+
+      // Guratan Tread Ban Bergerak
+      cCtx.strokeStyle = '#f8fafc';
+      cCtx.lineWidth = 1.8;
+      const offset = (motor.phase % 10);
+      for (let tx = cx - 26 + offset; tx <= cx + 26; tx += 10) {
+        if (tx >= cx - 28 && tx <= cx + 28) {
+          // Garis atas
+          cCtx.beginPath();
+          cCtx.moveTo(tx, cy - 18);
+          cCtx.lineTo(tx, cy - 11);
+          cCtx.stroke();
+          // Garis bawah
+          cCtx.beginPath();
+          cCtx.moveTo(tx, cy + 11);
+          cCtx.lineTo(tx, cy + 18);
+          cCtx.stroke();
+        }
+      }
+
+      // Panah Indikator Arah Putaran (CW / CCW)
+      if (motor.speed > 0 && (motor.mode === 'CW' || motor.mode === 'CCW')) {
+        cCtx.fillStyle = '#f59e0b';
+        cCtx.strokeStyle = '#f59e0b';
+        cCtx.lineWidth = 2;
+
+        const isCW = motor.mode === 'CW';
+        // Gambar panah rotasi melengkung
+        cCtx.beginPath();
+        cCtx.arc(cx, cy, 26, isCW ? -0.7 : 0.8, isCW ? 0.7 : 2.2, false);
+        cCtx.stroke();
+
+        // Kepala panah
+        const tipX = isCW ? cx + 24 : cx - 24;
+        const tipY = isCW ? cy + 10 : cy - 10;
+        cCtx.beginPath();
+        cCtx.moveTo(tipX, tipY);
+        cCtx.lineTo(tipX - 4, tipY - 5);
+        cCtx.lineTo(tipX + 4, tipY - 5);
+        cCtx.closePath();
+        cCtx.fill();
+      }
+    }
+
+    // ============================================================
+    // RENDER ARENA SIMULASI MOBIL LENGKAP
+    // ============================================================
     function drawScene() {
       ctx.clearRect(0, 0, canvasLogicalWidth, canvasLogicalHeight);
 
@@ -712,7 +841,7 @@
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvasLogicalWidth, y); ctx.stroke();
       }
 
-      // Halangan Latihan (Jika aktif)
+      // Halangan
       if (obstacleEnabled) {
         const ox = canvasLogicalWidth * obstacle.xRel;
         const oy = canvasLogicalHeight * obstacle.yRel;
@@ -746,24 +875,47 @@
       ctx.translate(robot.x, robot.y);
       ctx.rotate(robot.angle);
 
+      // 1. Roda Kiri (M1) & Kanan (M2)
       drawWheel(0, -WHEEL_BASE / 2, robot.m1.phase, '#38bdf8');
       drawWheel(0, WHEEL_BASE / 2, robot.m2.phase, '#2dd4bf');
 
+      // 2. As Poros Logam
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(-2, -WHEEL_BASE / 2 + 3.5, 4, WHEEL_BASE - 7);
+
+      // 3. Badan Sasis Balok Studuino
       ctx.fillStyle = '#0284c7';
       ctx.beginPath();
-      ctx.roundRect(-14, -13, 28, 26, 3);
+      ctx.roundRect(-14, -13, 28, 26, 4);
       ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1;
+      ctx.stroke();
 
+      // Pin Grid Studuino
+      ctx.fillStyle = '#0369a1';
+      [-7, 7].forEach(bx => {
+        [-6, 6].forEach(by => {
+          ctx.beginPath();
+          ctx.arc(bx, by, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      });
+
+      // 4. Panah Orientasi Depan
       ctx.fillStyle = '#f59e0b';
       ctx.beginPath();
-      ctx.moveTo(14, 0);
-      ctx.lineTo(8, -5);
-      ctx.lineTo(8, 5);
+      ctx.moveTo(13, 0);
+      ctx.lineTo(6, -6);
+      ctx.lineTo(6, 6);
       ctx.closePath();
       ctx.fill();
 
-      ctx.fillStyle = touchSensorActive ? '#f43f5e' : '#64748b';
-      ctx.fillRect(14, -3.5, 3, 7);
+      // 5. Sensor Bumper Depan
+      ctx.fillStyle = touchSensorActive ? '#f43f5e' : '#94a3b8';
+      ctx.beginPath();
+      ctx.roundRect(14, -4, 4, 8, 1.5);
+      ctx.fill();
 
       ctx.restore();
     }
@@ -771,19 +923,30 @@
     function drawWheel(x, y, phase, accent) {
       ctx.save();
       ctx.translate(x, y);
-      ctx.fillStyle = '#020617';
-      ctx.fillRect(-10, -3.5, 20, 7);
-      ctx.fillStyle = accent;
-      ctx.fillRect(-7, -2, 14, 4);
 
-      ctx.strokeStyle = '#94a3b8';
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.roundRect(-11, -4.5, 22, 9, 2);
+      ctx.fill();
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+
+      ctx.fillStyle = accent;
+      ctx.fillRect(-7, -2.5, 14, 5);
+
+      ctx.strokeStyle = '#e2e8f0';
       ctx.lineWidth = 1;
       const offset = (phase % 6);
-      for (let tx = -8 + offset; tx <= 9; tx += 6) {
-        ctx.beginPath();
-        ctx.moveTo(tx, -3.5);
-        ctx.lineTo(tx, 3.5);
-        ctx.stroke();
+      for (let tx = -9 + offset; tx <= 9; tx += 6) {
+        if (tx >= -10 && tx <= 10) {
+          ctx.beginPath();
+          ctx.moveTo(tx, -4.5);
+          ctx.lineTo(tx, -2.5);
+          ctx.moveTo(tx, 2.5);
+          ctx.lineTo(tx, 4.5);
+          ctx.stroke();
+        }
       }
       ctx.restore();
     }
@@ -830,6 +993,7 @@
 
       updateHud();
       drawScene();
+      drawDiagnosticWheels();
     }
 
     async function executeAst(nodes, execId) {
@@ -888,6 +1052,9 @@
       const dt = Math.min((now - lastPhysicsTime) / 1000, 0.05);
       lastPhysicsTime = now;
 
+      const elapsedSec = ((now - missionStartTime) / 1000).toFixed(1);
+      hudTimer.textContent = `${elapsedSec}s`;
+
       stepPhysics(dt);
       animFrame = requestAnimationFrame(mainPhysicsLoop);
     }
@@ -898,12 +1065,15 @@
         return;
       }
 
+      stopAndReset();
+
       isRunning = true;
       const thisExecId = ++currentExecutionId;
       runBtn.disabled = true;
       runBtn.classList.add('opacity-50');
 
-      lastPhysicsTime = performance.now();
+      missionStartTime = performance.now();
+      lastPhysicsTime = missionStartTime;
       animFrame = requestAnimationFrame(mainPhysicsLoop);
 
       await executeAst(programTree, thisExecId);

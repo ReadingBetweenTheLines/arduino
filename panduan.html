@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Buku Panduan & Visual Roda Studuino</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html, body {
+      background-color: #020617;
+      min-height: 100%;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans p-3 max-w-md mx-auto flex flex-col gap-3">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between pb-2 border-b border-slate-800">
+    <div class="flex items-center gap-1.5">
+      <span class="text-base">💡</span>
+      <div>
+        <h1 class="text-xs font-bold text-sky-400">Visual Anatomi Roda Studuino</h1>
+        <div class="text-[9px] text-slate-400 font-mono">Panduan Gerak &amp; Arah Putaran</div>
+      </div>
+    </div>
+    <button 
+      type="button" 
+      onclick="window.location.assign('index.html')" 
+      class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-1 rounded-lg text-[10px] font-mono font-bold shadow transition cursor-pointer">
+      ➔ Kembali ke Misi
+    </button>
+  </header>
+
+  <!-- Visual Close-Up Roda Tampak Atas (High-View Dual Wheel Monitor) -->
+  <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-inner flex flex-col gap-2.5">
+    <div class="flex justify-between items-center text-[10px] font-mono border-b border-slate-800 pb-1">
+      <span class="text-slate-400 uppercase tracking-wider font-semibold">Tampak Atas (Bird's-Eye Zoom)</span>
+      <span id="carMotionPrediction" class="text-amber-400 font-bold">Gerak: Mobil Diam</span>
+    </div>
+
+    <!-- Kanvas Zoom Roda -->
+    <div class="relative w-full aspect-[16/10] bg-slate-950 rounded-xl border border-slate-800/80 overflow-hidden flex items-center justify-center">
+      <canvas id="wheelInspectCanvas" width="340" height="210" class="block w-full h-full"></canvas>
+    </div>
+
+    <!-- Status Register Roda M1 & M2 -->
+    <div class="grid grid-cols-2 gap-2 text-[9px] font-mono">
+      <div class="bg-sky-950/40 border border-sky-800/50 rounded-lg p-2">
+        <div class="text-sky-400 font-bold mb-0.5">RODA KIRI (M1)</div>
+        <div>Mode: <span id="txtM1Mode" class="text-slate-300 font-bold">COAST</span></div>
+        <div>Daya: <span id="txtM1Power" class="text-sky-300 font-bold">0%</span></div>
+      </div>
+      <div class="bg-teal-950/40 border border-teal-800/50 rounded-lg p-2">
+        <div class="text-teal-400 font-bold mb-0.5">RODA KANAN (M2)</div>
+        <div>Mode: <span id="txtM2Mode" class="text-slate-300 font-bold">COAST</span></div>
+        <div>Daya: <span id="txtM2Power" class="text-teal-300 font-bold">0%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel Uji Coba Cepat Perintah Motor -->
+  <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 flex flex-col gap-2">
+    <div class="text-[10px] font-mono text-slate-400 uppercase tracking-wider font-semibold">
+      Uji Coba Respon Roda (Klik untuk Melihat Arah):
+    </div>
+
+    <!-- Preset Arah Gerak Mobil -->
+    <div class="grid grid-cols-2 gap-1.5 font-mono text-[9px]">
+      <button onclick="applyPreset('FORWARD')" class="py-2 px-2 bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 rounded-xl flex items-center justify-center gap-1 font-bold">
+        ⬆ Maju Lurus
+      </button>
+      <button onclick="applyPreset('BACKWARD')" class="py-2 px-2 bg-slate-800 hover:bg-slate-700 text-rose-300 border border-slate-700 rounded-xl flex items-center justify-center gap-1 font-bold">
+        ⬇ Mundur Lurus
+      </button>
+      <button onclick="applyPreset('SPIN_RIGHT')" class="py-2 px-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-xl flex items-center justify-center gap-1 font-bold">
+        ↻ Putar Kanan 90°
+      </button>
+      <button onclick="applyPreset('SPIN_LEFT')" class="py-2 px-2 bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 rounded-xl flex items-center justify-center gap-1 font-bold">
+        ↺ Putar Kiri 90°
+      </button>
+      <button onclick="applyPreset('PIVOT_RIGHT')" class="py-2 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl flex items-center justify-center gap-1 font-bold">
+        ↷ Belok Poros Kanan
+      </button>
+      <button onclick="applyPreset('STOP')" class="py-2 px-2 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800/60 rounded-xl flex items-center justify-center gap-1 font-bold">
+        ■ Berhenti (Rem)
+      </button>
+    </div>
+  </div>
+
+  <!-- Penjelasan Teori Studuino -->
+  <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-3 text-[10px] text-slate-300 font-mono leading-relaxed space-y-2">
+    <div class="font-bold text-sky-400 border-b border-slate-800 pb-1">📖 Catatan Logika Gerak:</div>
+    <p>• <b>Maju Lurus:</b> Kedua roda berputar ke depan secara serentak (<span class="text-sky-300">M1 CW</span> &amp; <span class="text-teal-300">M2 CW</span>).</p>
+    <p>• <b>Putar di Tempat (Spin Turn 90°):</b> Satu roda berputar ke depan dan roda lawannya berputar mundur (<span class="text-sky-300">M1 CW</span> &amp; <span class="text-teal-300">M2 CCW</span>) dengan durasi waktu TUNGGU sekitar <b>0.75 detik</b>.</p>
+    <p>• <b>Brake vs Coast:</b>
+      <br>- <span class="text-rose-400">REM (Brake):</span> Menghentikan putaran motor secara mendadak.
+      <br>- <span class="text-slate-400">BEBAS (Coast):</span> Mematikan daya sehingga mobil meluncur bebas karena inersia.
+    </p>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('wheelInspectCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const txtM1Mode = document.getElementById('txtM1Mode');
+    const txtM1Power = document.getElementById('txtM1Power');
+    const txtM2Mode = document.getElementById('txtM2Mode');
+    const txtM2Power = document.getElementById('txtM2Power');
+    const carMotionPrediction = document.getElementById('carMotionPrediction');
+
+    let state = {
+      m1: { speed: 0, mode: 'COAST', phase: 0 },
+      m2: { speed: 0, mode: 'COAST', phase: 0 },
+      lastTime: 0
+    };
+
+    function applyPreset(type) {
+      switch(type) {
+        case 'FORWARD':
+          state.m1 = { speed: 100, mode: 'CW', phase: state.m1.phase };
+          state.m2 = { speed: 100, mode: 'CW', phase: state.m2.phase };
+          carMotionPrediction.textContent = "Gerak: ⬆ Maju Lurus";
+          carMotionPrediction.className = "text-emerald-400 font-bold";
+          break;
+        case 'BACKWARD':
+          state.m1 = { speed: 100, mode: 'CCW', phase: state.m1.phase };
+          state.m2 = { speed: 100, mode: 'CCW', phase: state.m2.phase };
+          carMotionPrediction.textContent = "Gerak: ⬇ Mundur Lurus";
+          carMotionPrediction.className = "text-rose-400 font-bold";
+          break;
+        case 'SPIN_RIGHT':
+          state.m1 = { speed: 100, mode: 'CW', phase: state.m1.phase };
+          state.m2 = { speed: 100, mode: 'CCW', phase: state.m2.phase };
+          carMotionPrediction.textContent = "Gerak: ↻ Putar di Tempat (Kanan)";
+          carMotionPrediction.className = "text-amber-400 font-bold";
+          break;
+        case 'SPIN_LEFT':
+          state.m1 = { speed: 100, mode: 'CCW', phase: state.m1.phase };
+          state.m2 = { speed: 100, mode: 'CW', phase: state.m2.phase };
+          carMotionPrediction.textContent = "Gerak: ↺ Putar di Tempat (Kiri)";
+          carMotionPrediction.className = "text-amber-400 font-bold";
+          break;
+        case 'PIVOT_RIGHT':
+          state.m1 = { speed: 100, mode: 'CW', phase: state.m1.phase };
+          state.m2 = { speed: 0, mode: 'BRAKE', phase: state.m2.phase };
+          carMotionPrediction.textContent = "Gerak: ↷ Belok Poros Roda Kanan";
+          carMotionPrediction.className = "text-sky-300 font-bold";
+          break;
+        case 'STOP':
+          state.m1 = { speed: 0, mode: 'BRAKE', phase: state.m1.phase };
+          state.m2 = { speed: 0, mode: 'BRAKE', phase: state.m2.phase };
+          carMotionPrediction.textContent = "Gerak: ■ Berhenti Diam";
+          carMotionPrediction.className = "text-slate-400 font-bold";
+          break;
+      }
+      updateLabels();
+    }
+
+    function updateLabels() {
+      txtM1Mode.textContent = state.m1.mode;
+      txtM1Power.textContent = `${state.m1.speed}%`;
+      txtM2Mode.textContent = state.m2.mode;
+      txtM2Power.textContent = `${state.m2.speed}%`;
+    }
+
+    function renderLoop(now) {
+      if (!state.lastTime) state.lastTime = now;
+      const dt = Math.min((now - state.lastTime) / 1000, 0.05);
+      state.lastTime = now;
+
+      // Update fase putaran roda
+      if (state.m1.speed > 0) {
+        const dir1 = state.m1.mode === 'CW' ? 1 : (state.m1.mode === 'CCW' ? -1 : 0);
+        state.m1.phase += dir1 * dt * 80;
+      }
+      if (state.m2.speed > 0) {
+        const dir2 = state.m2.mode === 'CW' ? 1 : (state.m2.mode === 'CCW' ? -1 : 0);
+        state.m2.phase += dir2 * dt * 80;
+      }
+
+      drawZoomChassis();
+      requestAnimationFrame(renderLoop);
+    }
+
+    // Render Tampak Atas Zoom Robot Studuino
+    function drawZoomChassis() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Grid latar
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 20) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 20) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+
+      // 1. As / Poros Penghubung Roda
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(cx - 8, cy - 65, 16, 130);
+
+      // 2. Sasis Blok Studuino Tengah
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath();
+      ctx.roundRect(cx - 45, cy - 45, 90, 90, 8);
+      ctx.fill();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Pin Grid Studuino
+      ctx.fillStyle = '#0369a1';
+      [-25, 25].forEach(gx => {
+        [-25, 25].forEach(gy => {
+          ctx.beginPath();
+          ctx.arc(cx + gx, cy + gy, 6, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      });
+
+      // Panah Arah Depan Sasis
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.moveTo(cx + 35, cy);
+      ctx.lineTo(cx + 15, cy - 14);
+      ctx.lineTo(cx + 15, cy + 14);
+      ctx.closePath();
+      ctx.fill();
+
+      // Bumper Sensor Depan
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      ctx.roundRect(cx + 45, cy - 12, 8, 24, 3);
+      ctx.fill();
+
+      // Label Depan
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 8px monospace';
+      ctx.fillText('DEPAN ➔', cx + 10, cy - 24);
+
+      // 3. Render Zoom Roda Kiri (M1)
+      drawHighViewWheel(cx, cy - 75, state.m1, '#38bdf8', 'M1 (KIRI)');
+
+      // 4. Render Zoom Roda Kanan (M2)
+      drawHighViewWheel(cx, cy + 75, state.m2, '#2dd4bf', 'M2 (KANAN)');
+    }
+
+    function drawHighViewWheel(x, y, motor, accent, title) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Karet Ban Luar Besar
+      ctx.fillStyle = '#090d16';
+      ctx.beginPath();
+      ctx.roundRect(-42, -16, 84, 32, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Velg / Hub Motor
+      ctx.fillStyle = accent;
+      ctx.beginPath();
+      ctx.roundRect(-24, -10, 48, 20, 4);
+      ctx.fill();
+
+      // Baut Tengah
+      ctx.fillStyle = '#020617';
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Guratan Tread Ban (Beralih Sesuai Putaran)
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = 2;
+      const offset = (motor.phase % 12);
+      for (let tx = -36 + offset; tx <= 36; tx += 12) {
+        if (tx >= -38 && tx <= 38) {
+          ctx.beginPath();
+          ctx.moveTo(tx, -16);
+          ctx.lineTo(tx, -10);
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.moveTo(tx, 10);
+          ctx.lineTo(tx, 16);
+          ctx.stroke();
+        }
+      }
+
+      // Panah Indikator Putaran Motor
+      if (motor.speed > 0 && (motor.mode === 'CW' || motor.mode === 'CCW')) {
+        const isCW = motor.mode === 'CW';
+        ctx.fillStyle = '#f59e0b';
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 2;
+
+        // Garis panah rotasi
+        ctx.beginPath();
+        ctx.arc(0, 0, 26, isCW ? -0.7 : 0.8, isCW ? 0.7 : 2.2, false);
+        ctx.stroke();
+
+        const tipX = isCW ? 24 : -24;
+        const tipY = isCW ? 10 : -10;
+        ctx.beginPath();
+        ctx.moveTo(tipX, tipY);
+        ctx.lineTo(tipX - 5, tipY - 5);
+        ctx.lineTo(tipX + 5, tipY - 5);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Teks Label Roda
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 8px monospace';
+      ctx.fillText(title, -28, -20);
+
+      ctx.restore();
+    }
+
+    applyPreset('FORWARD');
+    requestAnimationFrame(renderLoop);
+  </script>
+</body>
+</html>
